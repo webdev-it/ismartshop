@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>iSmartShop — Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="spacer"></div>
+      <div class="brand logo-placeholder" id="brand">iSmartShop</div>
+    </header>
+
+    <div class="search-row">
+      <div class="search-wrap">
+        <input class="search" placeholder="Поиск" id="search" />
+      </div>
+      <button class="voice" aria-label="search">
+        <!-- right-side loupe icon -->
+        <svg viewBox="0 0 24 24" class="icon loupe" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="#111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" stroke="#111" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
+    </div>
+
+    <main class="content" id="view-home" data-view>
+      <section class="carousel-wrap">
+        <button class="carousel-btn left" id="prev" aria-label="prev">
+          <svg viewBox="0 0 24 24" class="icon arrow"><path d="M15 6l-6 6 6 6" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </button>
+        <div class="carousel" id="carousel">
+          <div class="slide"><img src="assets/images/iphone17pro.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/iphoneair.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/iphone17.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/airpods.jpg" alt="slide" /></div>
+        </div>
+        <button class="carousel-btn right" id="next" aria-label="next">
+          <svg viewBox="0 0 24 24" class="icon arrow"><path d="M9 6l6 6-6 6" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </button>
+        <div class="dots" id="dots"></div>
+      </section>
+
+        <!-- Categories: loaded from server (or fallback sample). Click to filter products -->
+        <section class="categories-wrap">
+          <div class="categories" id="categories">
+            <!-- pills will be injected by script.js -->
+          </div>
+        </section>
+
+      <section class="grid" id="products">
+        <!-- product cards will be injected here by script.js -->
+      </section>
+    </main>
+
+    <!-- Favorites view (placeholder) -->
+    <main class="content" id="view-favorites" data-view style="display:none">
+      <div class="favorites-header"><button class="favorites-pill">Избранные</button></div>
+      <section class="grid" id="favorites">
+        <!-- favorites will be injected here -->
+      </section>
+    </main>
+
+    <!-- Chats view -->
+    <main class="content" id="view-chats" data-view style="display:none">
+      <section class="chats-wrap">
+        <div class="chats-header">
+          <button class="pill big">Чаты</button>
+        </div>
+        <div class="chats-panel" id="chats-panel">
+          <div class="chat-list" id="chat-list">
+            <!-- list of chats will be injected here -->
+          </div>
+        </div>
+
+        <!-- chat overlay (separate window) -->
+        <div class="chat-view" id="chat-view" style="display:none">
+          <div class="chat-top">
+            <button id="chat-back" class="circle-back">‹</button>
+            <div class="chat-title-pill" id="chat-title">Чат</div>
+            <button id="chat-delete" class="del-pill" title="Удалить чат">Удалить чат</button>
+          </div>
+          <div class="messages" id="messages"></div>
+          <div class="composer">
+            <input id="message-input" placeholder="Введите сообщение" />
+            <button id="send-message" class="send-circle">➤</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    </main>
+
+    <main class="content" id="view-product" data-view style="display:none">
+      <section class="product-wrap">
+        <div class="product-card">
+          <button id="product-close" class="icon-btn" aria-label="back">‹</button>
+          <div class="product-image"><img id="product-img" src="" alt="product" /></div>
+          <div class="product-body">
+            <div class="product-price" id="product-price"></div>
+            <div class="product-title" id="product-title"></div>
+            <div class="product-desc" id="product-desc"></div>
+            <div class="product-colors" id="product-colors"></div>
+            <div class="product-actions">
+              <button id="product-fav" class="fav-pill">В избранные</button>
+              <button id="product-buy" class="buy-pill">Купить</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab" data-tab="view-favorites">★<span>Избранные</span></button>
+      <button class="tab active" data-tab="view-home">★<span>Главная</span></button>
+      <button class="tab" data-tab="view-chats">★<span>Чаты</span></button>
+    </nav>
+  </div>
+
+  <script src="script.js"></script>
+
+  <!-- Auth modal (login / registration) -->
+  <div class="auth-modal" id="auth-modal" aria-hidden="true" style="display:none">
+    <div class="auth-card">
+      <div class="auth-top">
+        <div class="auth-note">Зарегистрируйтесь или войдите в свой аккаунт чтобы пользоваться сайтом</div>
+      </div>
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab">Войти</button>
+        <button id="tab-register" class="auth-tab">Регистрация</button>
+      </div>
+      <div class="auth-forms">
+        <form id="form-login" class="auth-form" style="display:none">
+          <h2>Войти</h2>
+          <input id="login-email" placeholder="Адрес электронной почты" type="email" />
+          <input id="login-password" placeholder="Пароль" type="password" />
+          <button id="login-submit" class="primary-cta" type="button">Войти</button>
+        </form>
+        <form id="form-register" class="auth-form" style="display:none">
+          <h2>Регистрация</h2>
+          <input id="reg-name" placeholder="Имя" type="text" />
+          <input id="reg-email" placeholder="Адрес электронной почты" type="email" />
+          <input id="reg-password" placeholder="Пароль" type="password" />
+          <button id="reg-submit" class="primary-cta" type="button">Зарегистрироваться</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

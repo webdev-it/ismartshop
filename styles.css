@@ -1,0 +1,271 @@
+/* Mobile-first styles to match the provided screenshot */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+:root{
+  --bg:#dfe7ee;
+  --muted:#9aa4b2;
+  --card-white: rgba(255,255,255,0.98);
+  --frost: rgba(255,255,255,0.6);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: url('assets/images/bgismartstore.jpg') center/cover no-repeat fixed;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.app{
+  max-width:420px;
+  margin:0 auto;
+  min-height:100vh;
+  padding:12px 12px 32px;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+}
+
+.app::before{
+  content:'';
+  position:fixed;inset:0;z-index:-1;
+  background:rgba(230,236,241,0.6);
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+.app::before{
+  content:'';
+  position:fixed;inset:0;z-index:-1;
+  background:rgba(230,236,241,0.6);
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+.top{
+  height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 8px;
+}
+.top{position:relative;z-index:80;}
+.top .spacer{width:44px}
+.brand{
+  font-size:28px;
+  font-weight:700;
+  text-align:center;
+  color:#000;
+  background:transparent; /* placeholder for logo */
+}
+.menu{
+  width:44px;
+  height:44px;
+  border-radius:22px;
+  border:0;
+  background:rgba(255,255,255,0.9);
+  box-shadow:0 6px 12px rgba(0,0,0,0.08);
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  position:relative;
+  z-index:90;
+}
+
+.search-row{
+  display:flex;
+  gap:8px;
+  padding: 0 4px 12px 4px;
+}
+.search-wrap{position:relative;flex:1;display:flex;align-items:center}
+.icon{width:20px;height:20px;display:inline-block}
+.search-icon{position:absolute;left:12px;opacity:0.6}
+.search{
+  flex:1;height:46px;border-radius:22px;padding:0 16px 0 40px;border:0;background:var(--frost);font-size:16px;outline:none;box-shadow:inset 0 1px 0 rgba(0,0,0,0.03);backdrop-filter:blur(6px);
+}
+.voice{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,0.9);box-shadow:0 4px 8px rgba(0,0,0,0.04);cursor:pointer}
+
+.content{flex:1;overflow:auto;padding-bottom:120px}
+.carousel-wrap{position:relative;height:180px;border-radius:18px;overflow:hidden;margin-bottom:16px;box-shadow:0 10px 30px rgba(10,20,40,0.12)}
+.carousel{display:flex;height:100%;scroll-snap-type:x mandatory;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.slide{min-width:100%;height:100%;scroll-snap-align:center;position:relative}
+.slide img{width:100%;height:100%;object-fit:cover;display:block;filter:contrast(0.98) saturate(1.03)}
+.carousel-btn{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:24px;border:0;background:rgba(255,255,255,0.95);box-shadow:0 8px 18px rgba(0,0,0,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:6}
+.carousel-btn.left{left:10px}
+.carousel-btn.right{right:10px}
+.dots{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;display:flex;gap:8px;z-index:6}
+.dots .dot{width:8px;height:8px;border-radius:4px;background:rgba(0,0,0,0.22);box-shadow:0 1px 0 rgba(255,255,255,0.2) inset}
+.dots .dot.active{background:#000}
+
+/* hide native scrollbar for carousel */
+.carousel{ -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */ }
+.carousel::-webkit-scrollbar{ display: none; }
+
+/* Categories horizontal pills */
+.categories-wrap{padding:6px 0 14px}
+.categories{display:flex;gap:8px;overflow-x:auto;padding:6px 6px 10px}
+.categories::-webkit-scrollbar{display:none}
+.pill{flex:0 0 auto;padding:10px 16px;border-radius:20px;background:rgba(255,255,255,0.9);box-shadow:0 6px 12px rgba(0,0,0,0.06);cursor:pointer;font-weight:600}
+.pill.active{background:rgba(0,0,0,0.06)}
+
+/* ensure tabbar is on top */
+.tabbar{z-index:9999}
+
+/* Responsive adjustments */
+@media (max-width:360px){
+  .carousel-wrap{height:160px}
+  .card .image{height:120px}
+  .brand{font-size:24px}
+}
+@media (min-width:720px){
+  .app{max-width:720px}
+  .grid{grid-template-columns:repeat(3,1fr);gap:18px}
+  .carousel-wrap{height:260px}
+}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card-wrap{position:relative;z-index:1}
+.card{
+  border-radius:18px;overflow:visible;min-height:220px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;padding-bottom:0;margin-bottom:6px
+}
+.card-surface{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.36));box-shadow:0 10px 30px rgba(10,20,40,0.08);z-index:2}
+.card .image{height:140px;background:rgba(255,255,255,0.45);border-top-left-radius:18px;border-top-right-radius:18px;overflow:hidden;z-index:3}
+.card .image img{width:100%;height:100%;object-fit:cover;display:block}
+.card .footer{background:var(--card-white);padding:14px;border-bottom-left-radius:18px;border-bottom-right-radius:18px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;z-index:4}
+.price{font-weight:800;font-size:18px}
+.title{color:#222;margin-top:0;font-size:14px}
+.buy{margin-top:8px;display:block;width:92%;max-width:220px;margin-left:auto;margin-right:auto;text-align:center;padding:12px;border-radius:28px;background:linear-gradient(180deg, rgba(245,245,245,1), rgba(235,235,235,1));border:0;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,0.08)}
+.buy:active{transform:translateY(1px)}
+
+.card .footer .price{align-self:flex-start}
+
+.card .footer .title{color:#333}
+
+.card .footer .buy{font-weight:800}
+
+.tabbar{position:fixed;left:12px;right:12px;bottom:16px;height:72px;border-radius:24px;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:space-around;padding:8px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.08)}
+.tab{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:12px;cursor:pointer}
+.tab span{font-size:12px;color:#444}
+.tab.active{background:rgba(0,0,0,0.06);padding:8px 18px;border-radius:18px}
+.tab.active span{color:#000}
+
+/* Small adjustments to match screenshot spacing */
+@media (min-width:420px){.app{margin-top:10px}}
+
+/* Chats styles */
+
+.chats-wrap{display:flex;flex-direction:column;gap:10px;padding:12px}
+.chats-header{padding:6px 0}
+.pill.big{padding:18px 38px;border-radius:28px;background:rgba(255,255,255,0.95);font-size:20px;font-weight:700;border:0}
+.chats-panel{background:transparent;padding:12px}
+.chat-list{display:flex;flex-direction:column;gap:18px;padding:8px 4px}
+.chat-item{background:linear-gradient(180deg, #fff, #f6f7f8);padding:18px;border-radius:28px;box-shadow:none;cursor:pointer;position:relative}
+.chat-item .price{font-weight:800;font-size:18px;margin-bottom:6px}
+.chat-item .name{font-size:16px;color:#222}
+.chat-item + .chat-item{border-top:2px solid rgba(0,0,0,0.08);padding-top:18px}
+
+/* Chat overlay window */
+.chat-view{position:fixed;left:12px;right:12px;top:120px;bottom:120px;border-radius:22px;background:rgba(255,255,255,0.92);backdrop-filter: blur(6px);box-shadow:0 30px 60px rgba(0,0,0,0.16);z-index:120;display:flex;flex-direction:column;overflow:hidden}
+.chat-top{display:flex;align-items:center;gap:12px;padding:14px}
+.circle-back{width:56px;height:56px;border-radius:28px;border:0;background:rgba(255,255,255,0.95);box-shadow:0 10px 18px rgba(0,0,0,0.06);font-size:26px}
+.chat-title-pill{flex:1;background:rgba(255,255,255,0.95);padding:14px 20px;border-radius:28px;font-weight:700;text-align:left}
+.del-pill{background:#f1c7cc;padding:10px 16px;border-radius:20px;border:0;color:#000;font-weight:700}
+.messages{flex:1;overflow:auto;padding:18px 20px 30px;display:flex;flex-direction:column;gap:18px}
+.msg{max-width:72%;padding:16px;border-radius:20px;background:rgba(255,255,255,0.98);box-shadow:0 8px 18px rgba(0,0,0,0.04)}
+.msg.user{align-self:flex-end;background:linear-gradient(180deg,#b399ff,#b178ff);color:#07031a}
+.msg.admin{align-self:flex-start;background:linear-gradient(180deg,#fff,#f7f7f7);color:#111}
+.composer{position:relative;padding:12px}
+.composer input{width:100%;height:56px;border-radius:28px;padding:0 76px 0 18px;border:0;background:rgba(245,245,245,0.8);font-size:16px}
+.send-circle{position:absolute;right:22px;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:26px;border:0;background:rgba(255,255,255,0.95);box-shadow:0 8px 18px rgba(0,0,0,0.06);font-size:18px}
+
+@media (min-width:720px){
+  .chat-view{left:100px;right:100px;top:100px;bottom:100px}
+}
+
+@media (min-width:720px){
+  .chats-wrap{flex-direction:row}
+  .chat-list{width:320px}
+  .chat-view{flex:1;height:calc(100vh - 120px)}
+}
+
+/* favorite button overlay */
+.fav-btn{position:absolute;left:12px;top:12px;width:40px;height:40px;border-radius:10px;border:0;background:rgba(255,255,255,0.9);box-shadow:0 6px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;z-index:8}
+.fav-btn.active{background:linear-gradient(180deg,#ffe7e7,#ffdede);color:#b00}
+.card .image{position:relative}
+
+/* --- Animations & transitions --- */
+/* smooth button interactions */
+.carousel-btn, .tab, .buy, .primary-cta, .fav-btn, .fav-pill, .send-circle, .circle-back{
+  transition: transform 140ms ease, box-shadow 160ms ease, opacity 160ms ease, background 180ms ease;
+}
+.carousel-btn:hover, .tab:hover, .buy:hover, .primary-cta:hover, .fav-btn:hover, .fav-pill:hover{ transform: translateY(-3px); }
+.carousel-btn:active, .tab:active, .buy:active, .primary-cta:active, .fav-btn:active, .fav-pill:active{ transform: translateY(0) scale(0.98); }
+
+/* card entrance */
+.card-wrap{opacity:0;transform:translateY(10px) scale(0.995);transition:transform 320ms cubic-bezier(.2,.9,.3,1),opacity 260ms ease}
+.card-wrap.entered{opacity:1;transform:none}
+
+/* modal show animation */
+.auth-modal{transition:background 220ms ease}
+.auth-modal .auth-card{opacity:0;transform:translateY(10px) scale(0.985);transition:transform 260ms cubic-bezier(.2,.9,.3,1),opacity 240ms ease}
+.auth-modal.open .auth-card{opacity:1;transform:none}
+.auth-modal.open{background:rgba(0,0,0,0.22)}
+
+/* subtle pulse for fav button when toggled */
+.fav-btn.pulse{animation:fav-pulse 420ms ease}
+.pulse{animation:fav-pulse 420ms ease}
+@keyframes fav-pulse{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+
+/* focus outline for accessibility */
+.tab:focus, .buy:focus, .primary-cta:focus, .fav-btn:focus, .fav-pill:focus{outline:2px solid rgba(0,123,255,0.18);outline-offset:4px}
+
+/* favorites header pill */
+.favorites-header{padding:8px 6px}
+.favorites-pill{padding:16px 28px;border-radius:28px;background:rgba(255,255,255,0.95);font-size:22px;font-weight:700;border:0;box-shadow:0 10px 22px rgba(0,0,0,0.06)}
+
+/* Product detail view */
+.product-wrap{padding:10px 6px 80px}
+.product-card{background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,245,245,0.95));border-radius:18px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);position:relative}
+.product-image img{width:100%;height:260px;object-fit:cover;display:block}
+.product-body{padding:18px 16px 20px}
+.product-price{font-weight:800;font-size:20px;margin-bottom:8px}
+.product-title{font-size:16px;margin-bottom:10px;color:#222}
+.product-desc{color:#333;opacity:0.9;margin-bottom:12px;line-height:1.5}
+.product-colors{font-size:14px;color:#444;margin-bottom:18px}
+.product-actions{display:flex;gap:12px}
+.fav-pill{flex:1;padding:12px;border-radius:28px;border:0;background:linear-gradient(180deg, #e9e9ec, #dcdde0);color:#111;font-weight:700;cursor:pointer}
+.fav-pill.active{background:linear-gradient(180deg,#ffe7e7,#ffdede);color:#b00}
+.buy-pill{flex:1;padding:12px;border-radius:28px;border:0;background:linear-gradient(180deg, #e9e9ec, #dcdde0);font-weight:700;cursor:pointer}
+
+/* ensure close button sits above image */
+#product-close{position:absolute;left:12px;top:12px;z-index:12}
+
+@media (max-width:360px){
+  .product-image img{height:220px}
+}
+
+/* Auth modal styles */
+.auth-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,0.12)}
+.auth-modal[aria-hidden="true"]{display:none}
+.auth-card{width:92%;max-width:520px;background:linear-gradient(180deg,#ffffff,#fbfbfc);border-radius:24px;padding:16px;box-shadow:0 18px 40px rgba(8,12,24,0.18)}
+.auth-top{padding:10px}
+.auth-note{background:linear-gradient(180deg, rgba(246,238,250,0.9), rgba(250,246,255,0.9));padding:18px;border-radius:20px;font-size:18px;color:#111}
+.auth-tabs{display:flex;gap:12px;padding:12px 6px}
+.auth-tab{flex:1;padding:12px;border-radius:20px;border:1px solid rgba(0,0,0,0.06);background:rgba(255,255,255,0.9);font-weight:700;cursor:pointer;color:#111;transition:background 160ms ease,color 160ms ease,transform 120ms}
+.auth-tab:hover{transform:translateY(-1px)}
+.auth-tab.active{background:#111;color:#fff;box-shadow:0 8px 20px rgba(0,0,0,0.18)}
+.auth-forms{padding:6px}
+.auth-form h2{font-size:36px;margin:10px 0}
+.auth-form input{display:block;width:100%;padding:16px;border-radius:28px;border:0;margin:12px 0;background:rgba(0,0,0,0.06);font-size:16px}
+.primary-cta{display:block;width:100%;padding:16px;border-radius:32px;border:0;background:#007bff;color:#fff;font-weight:700;font-size:18px;cursor:pointer;box-shadow:0 10px 22px rgba(0,123,255,0.18)}
+
+@media (max-width:420px){
+  .auth-form h2{font-size:28px}
+  .auth-card{padding:12px}
+}
+
+/* blur state when modal open */
+.app.blurred{filter: blur(4px) saturate(0.95);transition:filter 0.18s ease;pointer-events:none;user-select:none}
+
