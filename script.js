@@ -108,6 +108,8 @@ function openChat(productId, prefillMessage){
   const input = document.getElementById('message-input');
   input.value = prefillMessage || `Здравствуйте! Я бы хотел купить ${p.title} .`;
   input.focus();
+  // mark app as chat-open so everything else is hidden via CSS
+  document.querySelector('.app')?.classList.add('chat-open');
   // bind send
   const sendBtn = document.getElementById('send-message');
   sendBtn.onclick = async ()=>{
@@ -136,6 +138,8 @@ document.getElementById('chat-delete').addEventListener('click', ()=>{
   if(!currentChatId) return;
   if(confirm('Удалить этот чат?')){ deleteThread(currentChatId); renderChatList(productsCache); document.getElementById('chat-view').style.display = 'none'; }
 });
+// ensure chat-open class removed when chat deleted
+document.getElementById('chat-delete')?.addEventListener('click', ()=>{ document.querySelector('.app')?.classList.remove('chat-open'); });
 
 function deleteThread(productId){ const t = loadThreads(); if(t[productId]){ delete t[productId]; saveThreads(t); } }
 
@@ -179,6 +183,7 @@ document.getElementById('product-fav')?.addEventListener('click', (e)=>{
 document.addEventListener('click', (e)=>{
   if(e.target && e.target.id === 'chat-back'){
     document.getElementById('chat-view').style.display = 'none';
+    document.querySelector('.app')?.classList.remove('chat-open');
   }
 });
 

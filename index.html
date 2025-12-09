@@ -72,19 +72,7 @@
           </div>
         </div>
 
-        <!-- chat overlay (separate window) -->
-        <div class="chat-view" id="chat-view" style="display:none">
-          <div class="chat-top">
-            <button id="chat-back" class="circle-back">‹</button>
-            <div class="chat-title-pill" id="chat-title">Чат</div>
-            <button id="chat-delete" class="del-pill" title="Удалить чат">Удалить чат</button>
-          </div>
-          <div class="messages" id="messages"></div>
-          <div class="composer">
-            <input id="message-input" placeholder="Введите сообщение" />
-            <button id="send-message" class="send-circle">➤</button>
-          </div>
-        </div>
+        <!-- chat overlay (separate window) - moved out to be a direct child of .app -->
       </section>
     </main>
     </main>
@@ -113,6 +101,19 @@
       <button class="tab active" data-tab="view-home">★<span>Главная</span></button>
       <button class="tab" data-tab="view-chats">★<span>Чаты</span></button>
     </nav>
+    <!-- chat overlay (separate window) - direct child of .app so it stays visible when others are hidden -->
+    <div class="chat-view" id="chat-view" style="display:none">
+      <div class="chat-top">
+        <button id="chat-back" class="circle-back">‹</button>
+        <div class="chat-title-pill" id="chat-title">Чат</div>
+        <button id="chat-delete" class="del-pill" title="Удалить чат">Удалить чат</button>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <input id="message-input" placeholder="Введите сообщение" />
+        <button id="send-message" class="send-circle">➤</button>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>
