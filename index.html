@@ -6,7 +6,14 @@
   <title>iSmartShop — Prototype</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="loading">
+  <!-- Loading overlay shown on first open. Hides after 3s. -->
+  <div id="loader" class="loader" role="status" aria-label="Загрузка">
+    <div class="loader-inner">
+      <img src="assets/images/logo.png" alt="iSmartShop" class="loader-logo" />
+    </div>
+  </div>
+
   <div class="app">
     <header class="top">
       <div class="spacer"></div>
@@ -101,9 +108,18 @@
     </main>
 
     <nav class="tabbar">
-      <button class="tab" data-tab="view-favorites">★<span>Избранные</span></button>
-      <button class="tab active" data-tab="view-home">★<span>Главная</span></button>
-      <button class="tab" data-tab="view-chats">★<span>Чаты</span></button>
+      <button class="tab" data-tab="view-favorites" aria-label="Избранные">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
+        <span>Избранные</span>
+      </button>
+      <button class="tab active" data-tab="view-home" aria-label="Главная">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M3 7h18v13H3z"/><path d="M3 7l9-4 9 4"/></svg>
+        <span>Главная</span>
+      </button>
+      <button class="tab" data-tab="view-chats" aria-label="Чаты">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Чаты</span>
+      </button>
     </nav>
     <!-- chat overlay (separate window) - direct child of .app so it stays visible when others are hidden -->
     <div class="chat-view" id="chat-view" style="display:none">

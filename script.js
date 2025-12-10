@@ -1,4 +1,19 @@
 // script.js — inject products and handle carousel
+// Loader: keep initial animated logo visible for at least 3 seconds
+const INITIAL_LOADER_MS = 3000;
+function hideLoaderNow(){
+  try{
+    document.body.classList.remove('loading');
+    const loader = document.getElementById('loader');
+    if(loader){
+      loader.classList.add('loader-hide');
+      // remove from DOM after hide transition
+      setTimeout(()=>{ loader.remove(); }, 420);
+    }
+  }catch(e){/* ignore */}
+}
+// start timer immediately so the loader always lasts ~3s
+setTimeout(hideLoaderNow, INITIAL_LOADER_MS);
 
 const sampleProducts = [
   { id: '1', title: 'iPhone 17 Pro Max', price: '109 000 ₽', image: 'assets/images/example.jpg', category: 'phones', description: 'iPhone 17 Pro Max на 256ГБ, 512ГБ и 1ТБ', colors: ['Белый','Синий','Красный','Оранжевый'] },
@@ -191,6 +206,14 @@ function showProduct(productId){
   const colorsEl = document.getElementById('product-colors'); if(colorsEl){ colorsEl.innerHTML = ''; if(p.colors && p.colors.length) colorsEl.textContent = 'Доступные цвета: ' + p.colors.join(', '); }
   // favorite pill state
   const pfav = document.getElementById('product-fav'); if(pfav){ pfav.dataset.id = productId; const favs = loadFavs(); if(favs.includes(productId)) pfav.classList.add('active'); else pfav.classList.remove('active'); }
+
+  // ensure product-fav button contains an icon (heart) for consistency with cards
+  if(pfav && !pfav.querySelector('svg')){
+    pfav.innerHTML = `
+      <svg viewBox="0 0 24 24" class="icon"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
+      В избранные
+    `;
+  }
   // buy button binds to open chat with prefilled message
   const pbuy = document.getElementById('product-buy'); if(pbuy){ pbuy.onclick = ()=> openChat(productId, `Здравствуйте! Я бы хотел купить ${p.title} .`); }
 }
@@ -376,8 +399,10 @@ function renderFavorites(products){
         </div>
       </div>
     `;
-    // favorite button
-    const favBtn = document.createElement('button'); favBtn.className = 'fav-btn active'; favBtn.dataset.id = p.id; favBtn.innerHTML='★'; card.querySelector('.image').appendChild(favBtn);
+    // favorite button (heart icon)
+    const favBtn = document.createElement('button'); favBtn.className = 'fav-btn active'; favBtn.dataset.id = p.id; favBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" class="icon"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
+    `; card.querySelector('.image').appendChild(favBtn);
     wrap.appendChild(card); el.appendChild(wrap);
     // staggered entrance
     setTimeout(()=> wrap.classList.add('entered'), 40 * i);
@@ -412,7 +437,9 @@ function renderProducts(products){
     favBtn.className = 'fav-btn';
     favBtn.title = 'Добавить в избранное';
     favBtn.dataset.id = p.id;
-    favBtn.innerHTML = '★';
+    favBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" class="icon"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
+    `;
     card.querySelector('.image').appendChild(favBtn);
     wrap.appendChild(card);
     el.appendChild(wrap);
