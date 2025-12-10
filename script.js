@@ -8,6 +8,42 @@ const sampleProducts = [
   { id: '5', title: 'Airpods Pro', price: '30 000 $', image: 'https://picsum.photos/600/400?random=5', category: 'audio', description: 'Шумоподавляющие наушники', colors: ['Белый'] }
 ];
 
+// --- Theme handling (dark / light) ---
+const THEME_KEY = 'ismart_theme_v1';
+function applyTheme(theme){
+  document.documentElement.classList.remove('theme-light','theme-dark');
+  document.documentElement.classList.add('theme-' + (theme === 'dark' ? 'dark' : 'light'));
+  try{ localStorage.setItem(THEME_KEY, theme); }catch(e){}
+  const btn = document.getElementById('theme-toggle');
+  if(btn){ btn.setAttribute('aria-pressed', String(theme === 'dark')); btn.title = theme === 'dark' ? 'Тёмная тема' : 'Светлая тема'; }
+  // swap header logo depending on theme: show darklogo in light theme for contrast
+  try{
+    const brandImg = document.querySelector('#brand img');
+    if(brandImg){
+      if(theme === 'light') brandImg.src = 'assets/images/darklogo.png';
+      else brandImg.src = 'assets/images/logo.png';
+    }
+  }catch(e){/* ignore if DOM not ready */}
+}
+
+function setupThemeOnLoad(){
+  try{
+    const saved = localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    applyTheme(theme);
+  }catch(e){ applyTheme('dark'); }
+
+  const btn = document.getElementById('theme-toggle');
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      const cur = document.documentElement.classList.contains('theme-dark') ? 'dark' : 'light';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    });
+  }
+}
+
 const sampleCategories = [
   { id: 'all', name: 'Все' },
   { id: 'phones', name: 'Смартфоны' },
@@ -445,6 +481,8 @@ function setupCarousel(){
 
 // Init
 (async function(){
+  // initialize theme early to avoid flash
+  setupThemeOnLoad();
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
   productsCache = products;
   categoriesCache = categories;
