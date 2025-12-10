@@ -1,11 +1,11 @@
 // script.js — inject products and handle carousel
 
 const sampleProducts = [
-  { id: '1', title: 'iPhone 17 Pro Max', price: '109 000 $', image: 'https://picsum.photos/600/400?random=1', category: 'phones', description: 'iPhone 17 Pro Max на 256ГБ, 512ГБ и 1ТБ', colors: ['Белый','Синий','Красный','Оранжевый'] },
-  { id: '2', title: 'iPhone 15 Pro', price: '94 000 $', image: 'https://picsum.photos/600/400?random=2', category: 'phones', description: 'Мощный смартфон с отличной камерой', colors: ['Белый','Черный'] },
-  { id: '3', title: 'iPhone 14', price: '79 000 $', image: 'https://picsum.photos/600/400?random=3', category: 'phones', description: 'Сбалансированная модель для повседневного использования', colors: ['Черный','Серый'] },
-  { id: '4', title: 'iPhone SE', price: '49 000 $', image: 'https://picsum.photos/600/400?random=4', category: 'phones', description: 'Компактный и доступный вариант', colors: ['Белый','Черный'] },
-  { id: '5', title: 'Airpods Pro', price: '30 000 $', image: 'https://picsum.photos/600/400?random=5', category: 'audio', description: 'Шумоподавляющие наушники', colors: ['Белый'] }
+  { id: '1', title: 'iPhone 17 Pro Max', price: '109 000 ₽', image: 'assets/images/example.jpg', category: 'phones', description: 'iPhone 17 Pro Max на 256ГБ, 512ГБ и 1ТБ', colors: ['Белый','Синий','Красный','Оранжевый'] },
+  { id: '2', title: 'Samsung Watch 8 Classic', price: '25 000 ₽', image: 'assets/images/example2.jpg', category: 'phones', description: 'Мощные умные часы с классическим дизайном', colors: ['Белый','Черный'] },
+  { id: '3', title: 'iPhone 16', price: '88 000 ₽', image: 'assets/images/example3.jpg', category: 'phones', description: 'Сбалансированная модель для повседневного использования', colors: ['Черный','Серый'] },
+  { id: '4', title: 'MacBook Pro', price: '200 000 ₽', image: 'assets/images/example4.jpg', category: 'phones', description: 'Компактный и доступный вариант', colors: ['Белый','Черный'] },
+  { id: '5', title: 'Galaxy Tab', price: '78 000 ₽', image: 'assets/images/example5.jpg', category: 'audio', description: 'Планшет для работы и развлечений', colors: ['Белый'] }
 ];
 
 // --- Theme handling (dark / light) ---

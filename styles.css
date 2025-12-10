@@ -3,7 +3,7 @@
 
 :root{
   /* Light theme (default) */
-  --bg-gradient: linear-gradient(rgb(182, 153, 255), rgb(149, 199, 255));
+  --bg-gradient: linear-gradient(rgb(255, 255, 255), rgb(200, 226, 255));
   --text: #111;
   --icon-stroke: rgba(0,0,0,0.85);
   --muted: #6b7480;
