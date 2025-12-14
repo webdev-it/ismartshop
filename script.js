@@ -15,13 +15,8 @@ function hideLoaderNow(){
 // start timer immediately so the loader always lasts ~3s
 setTimeout(hideLoaderNow, INITIAL_LOADER_MS);
 
-const sampleProducts = [
-  { id: '1', title: 'iPhone 17 Pro Max', price: '109 000 ₽', image: 'assets/images/example.jpg', category: 'phones', description: 'iPhone 17 Pro Max на 256ГБ, 512ГБ и 1ТБ', colors: ['Белый','Синий','Красный','Оранжевый'] },
-  { id: '2', title: 'Samsung Watch 8 Classic', price: '25 000 ₽', image: 'assets/images/example2.jpg', category: 'phones', description: 'Мощные умные часы с классическим дизайном', colors: ['Белый','Черный'] },
-  { id: '3', title: 'iPhone 16', price: '88 000 ₽', image: 'assets/images/example3.jpg', category: 'phones', description: 'Сбалансированная модель для повседневного использования', colors: ['Черный','Серый'] },
-  { id: '4', title: 'MacBook Pro', price: '200 000 ₽', image: 'assets/images/example4.jpg', category: 'phones', description: 'Компактный и доступный вариант', colors: ['Белый','Черный'] },
-  { id: '5', title: 'Galaxy Tab', price: '78 000 ₽', image: 'assets/images/example5.jpg', category: 'audio', description: 'Планшет для работы и развлечений', colors: ['Белый'] }
-];
+// No client-side sample products — products are fetched from the server.
+const sampleProducts = [];
 
 // --- Theme handling (dark / light) ---
 const THEME_KEY = 'ismart_theme_v1';
@@ -59,33 +54,42 @@ function setupThemeOnLoad(){
   }
 }
 
-const sampleCategories = [
-  { id: 'all', name: 'Все' },
-  { id: 'phones', name: 'Смартфоны' },
-  { id: 'audio', name: 'Аксессуары' }
-];
+// categories come from the server; include an 'all' entry client-side when rendering if needed
+const sampleCategories = [];
 
 let selectedCategory = 'all';
 
+// API base (set `window.ISMART_API_BASE` to full backend URL if needed)
+const API_BASE = window.ISMART_API_BASE || '';
+
+// helper for fetch that includes cookies for auth
+async function apiFetch(path, opts = {}){
+  const url = (path.startsWith('http') || path.startsWith('/')) ? API_BASE + path : API_BASE + '/' + path;
+  const init = { credentials: 'include', headers: {}, ...opts };
+  // ensure content-type when body is an object
+  if(init.body && typeof init.body === 'object' && !(init.body instanceof FormData)){
+    init.headers['Content-Type'] = 'application/json';
+    init.body = JSON.stringify(init.body);
+  }
+  return fetch(url, init);
+}
 async function fetchProducts(){
   try{
-    const res = await fetch('/api/products');
+    const res = await apiFetch('/api/products');
     if(!res.ok) throw new Error('no api');
-    const data = await res.json();
-    return data;
+    return await res.json();
   }catch(e){
-    // fallback to sample
     return sampleProducts;
   }
 }
 
 async function fetchCategories(){
   try{
-    const res = await fetch('/api/categories');
+    const res = await apiFetch('/api/categories');
     if(!res.ok) throw new Error('no api');
-    const data = await res.json();
-    return data;
+    return await res.json();
   }catch(e){
+    // return empty categories if API unavailable
     return sampleCategories;
   }
 }
@@ -163,25 +167,20 @@ function openChat(productId, prefillMessage){
   document.querySelector('.app')?.classList.add('chat-open');
   // bind send
   const sendBtn = document.getElementById('send-message');
-  sendBtn.onclick = async ()=>{
-    const text = input.value.trim(); if(!text) return;
-    const msg = {from:'user', text, at: Date.now()};
-    appendMessage(productId, msg);
-    // render
-    const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
-    input.value = '';
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    // update chat list preview
-    const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
-    // optional: simulate admin reply after delay (demo only)
-    setTimeout(()=>{
-      const reply = {from:'admin', text: 'Спасибо! Мы свяжемся с вами в ближайшее время.', at: Date.now()};
-      appendMessage(productId, reply);
-      const rd = document.createElement('div'); rd.className = 'msg admin'; rd.textContent = reply.text; messagesEl.appendChild(rd);
+    sendBtn.onclick = async ()=>{
+      const text = input.value.trim(); if(!text) return;
+      const msg = {from:'user', text, at: Date.now()};
+      appendMessage(productId, msg);
+      // render locally
+      const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
+      input.value = '';
       messagesEl.scrollTop = messagesEl.scrollHeight;
-      const lastEl2 = document.getElementById(`last-${productId}`); if(lastEl2) lastEl2.textContent = reply.text.slice(0,60);
-    }, 1200);
-  };
+      const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
+      // try to send to server (best-effort). Server will create or append thread.
+      try{
+        await apiFetch('/api/threads', { method: 'POST', body: { productId, text, userName: (loadUser()||{}).name || null } });
+      }catch(e){ /* ignore network errors, local cache still works */ }
+    };
 }
 
 // chat delete from header
