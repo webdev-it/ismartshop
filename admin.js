@@ -105,14 +105,19 @@
   async function doAdminLogin(username, pass){
     try{
       const resp = await apiFetch('/auth/admin-login', { method: 'POST', body: { username, password: pass } });
+      console.log('doAdminLogin: admin-login response status=', resp.status);
       const ct = resp.headers.get('content-type') || '';
       let body = null;
-      if(ct.indexOf('application/json') !== -1) body = await resp.json();
+      if(ct.indexOf('application/json') !== -1) {
+        body = await resp.json();
+        console.log('doAdminLogin: admin-login body=', body);
+      }
       if(!resp.ok){
         return { error: body || (`status ${resp.status}`) };
       }
       // on success, try to fetch current user (cookie should be set)
       const me = await tryApi('GET','/auth/me');
+      console.log('doAdminLogin: /auth/me ->', me);
       return me;
     }catch(e){
       console.error('admin-login error', e);
