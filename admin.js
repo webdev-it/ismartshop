@@ -103,9 +103,21 @@
 
   // admin login using ADMIN_USER/ADMIN_PASS via /auth/admin-login
   async function doAdminLogin(username, pass){
-    const res = await tryApi('POST','/auth/admin-login', { username, password: pass });
-    if(!res) return null;
-    return await fetchMe();
+    try{
+      const resp = await apiFetch('/auth/admin-login', { method: 'POST', body: { username, password: pass } });
+      const ct = resp.headers.get('content-type') || '';
+      let body = null;
+      if(ct.indexOf('application/json') !== -1) body = await resp.json();
+      if(!resp.ok){
+        return { error: body || (`status ${resp.status}`) };
+      }
+      // on success, try to fetch current user (cookie should be set)
+      const me = await tryApi('GET','/auth/me');
+      return me;
+    }catch(e){
+      console.error('admin-login error', e);
+      return { error: e.message };
+    }
   }
 
   async function doLogout(){
@@ -285,8 +297,15 @@
         const pass = document.getElementById('admin-login-pass').value;
         // Only attempt admin-login using ADMIN_USER / ADMIN_PASS (no email fallback)
         const me = await doAdminLogin(userVal, pass);
-        if(me && me.role === 'admin'){ showLoginModal(false); await initAfterAuth(); }
-        else { alert('Login failed or not admin'); }
+        if(me && me.role === 'admin'){
+          showLoginModal(false);
+          await initAfterAuth();
+        } else if(me && me.error){
+          const msg = (typeof me.error === 'string') ? me.error : (me.error.message || JSON.stringify(me.error));
+          alert('Login failed: ' + msg);
+        } else {
+          alert('Login failed or not admin');
+        }
       });
     }
 
