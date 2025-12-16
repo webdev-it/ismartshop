@@ -80,13 +80,21 @@
   </style>
 </head>
 <body>
+  <!-- Cookie access banner / check for admin -->
+  <div id="admin-cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1">Для входа в админ-панель требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — разрешите cookies в настройках браузера и используйте HTTPS.</div>
+      <div style="display:flex;gap:8px"><button id="admin-cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="admin-cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
+    </div>
+  </div>
+
   <div class="admin-app">
     <div id="admin-login-modal" class="admin-login-modal hidden">
       <div class="admin-login-card">
         <h3>Вход в админку</h3>
         <div class="form-row"><input id="admin-login-username" placeholder="Логин"/></div>
         <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль"/></div>
-        <div class="form-row" style="text-align:right"><button id="admin-login-submit">Войти</button></div>
+        <div class="form-row" style="text-align:right"><button id="admin-login-submit" disabled>Войти</button></div>
       </div>
     </div>
     <aside class="admin-sidebar">
@@ -155,5 +163,26 @@
   </div>
 
   <script src="admin.js"></script>
+  <script>
+    (function(){
+      const banner = document.getElementById('admin-cookie-banner');
+      const btn = document.getElementById('admin-cookie-test-btn');
+      const dismiss = document.getElementById('admin-cookie-dismiss');
+      const loginBtn = document.getElementById('admin-login-submit');
+      function testCookies(){
+        try{
+          document.cookie = 'ismart_test=1; path=/';
+          const ok = document.cookie.indexOf('ismart_test=1') !== -1;
+          if(ok){ document.cookie = 'ismart_test=; Max-Age=0; path=/'; window.ISMART_COOKIES_OK = true; banner.style.display='none'; if(loginBtn) loginBtn.disabled = false; }
+          else { window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; }
+          return ok;
+        }catch(e){ window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; return false; }
+      }
+      btn?.addEventListener('click', ()=>{ const ok = testCookies(); if(ok) alert('Cookies доступны.'); else alert('Cookies недоступны. Проверьте настройки браузера и HTTPS.'); });
+      dismiss?.addEventListener('click', ()=> banner.style.display='none');
+      // run test after small delay to allow admin.js to attach handlers
+      setTimeout(testCookies, 100);
+    })();
+  </script>
 </body>
 </html>

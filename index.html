@@ -142,6 +142,35 @@
 
   <script src="script.js"></script>
 
+  <!-- Cookie access banner / check -->
+  <div id="cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1">Для корректной работы входа и регистрации требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — откройте настройки браузера и разрешите cookies (включая third‑party cookies) и используйте HTTPS.</div>
+      <div style="display:flex;gap:8px"><button id="cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const banner = document.getElementById('cookie-banner');
+      const btn = document.getElementById('cookie-test-btn');
+      const dismiss = document.getElementById('cookie-dismiss');
+      function testCookies(){
+        try{
+          // try to set a test cookie readable by JS
+          document.cookie = 'ismart_test=1; path=/';
+          const ok = document.cookie.indexOf('ismart_test=1') !== -1;
+          if(ok){ document.cookie = 'ismart_test=; Max-Age=0; path=/'; window.ISMART_COOKIES_OK = true; banner.style.display='none'; }
+          else { window.ISMART_COOKIES_OK = false; banner.style.display=''; }
+          return ok;
+        }catch(e){ window.ISMART_COOKIES_OK = false; banner.style.display=''; return false; }
+      }
+      btn?.addEventListener('click', ()=>{ const ok = testCookies(); if(ok) alert('Cookies доступны.'); else alert('Cookies недоступны. Проверьте настройки браузера и HTTPS.'); });
+      dismiss?.addEventListener('click', ()=> banner.style.display='none');
+      setTimeout(testCookies, 50);
+    })();
+  </script>
+
   <!-- Auth modal (login / registration) -->
   <div class="auth-modal" id="auth-modal" aria-hidden="true" style="display:none">
     <div class="auth-card">
