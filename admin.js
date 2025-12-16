@@ -281,11 +281,10 @@
     if(loginBtn){
       loginBtn.addEventListener('click', async ()=>{
         const usernameEl = document.getElementById('admin-login-username');
-        const emailEl = document.getElementById('admin-login-email');
-        const userVal = usernameEl ? usernameEl.value.trim() : (emailEl ? emailEl.value.trim() : '');
+        const userVal = usernameEl ? usernameEl.value.trim() : '';
         const pass = document.getElementById('admin-login-pass').value;
-        // prefer admin-login (env) endpoint
-        const me = await doAdminLogin(userVal, pass) || await doLogin(userVal, pass);
+        // Only attempt admin-login using ADMIN_USER / ADMIN_PASS (no email fallback)
+        const me = await doAdminLogin(userVal, pass);
         if(me && me.role === 'admin'){ showLoginModal(false); await initAfterAuth(); }
         else { alert('Login failed or not admin'); }
       });
