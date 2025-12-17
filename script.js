@@ -167,20 +167,48 @@ function openChat(productId, prefillMessage){
   document.querySelector('.app')?.classList.add('chat-open');
   // bind send
   const sendBtn = document.getElementById('send-message');
-    sendBtn.onclick = async ()=>{
-      const text = input.value.trim(); if(!text) return;
-      const msg = {from:'user', text, at: Date.now()};
-      appendMessage(productId, msg);
-      // render locally
-      const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
-      input.value = '';
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
-      // try to send to server (best-effort). Server will create or append thread.
-      try{
-        await apiFetch('/api/threads', { method: 'POST', body: { productId, text, userName: (loadUser()||{}).name || null } });
-      }catch(e){ /* ignore network errors, local cache still works */ }
-    };
+  sendBtn.onclick = async ()=>{
+    const text = input.value.trim(); if(!text) return;
+    const user = loadUser();
+    const msg = {from:'user', text, at: Date.now()};
+    appendMessage(productId, msg);
+    // render locally
+    const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
+    input.value = '';
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
+    
+    // send to server (best-effort)
+    try{
+      // Если это первое сообщение, создаем новый thread
+      const thread = getThread(productId);
+      if(thread.length <= 1) {
+        await apiFetch('/api/threads', { 
+          method: 'POST', 
+          body: { 
+            productId, 
+            text, 
+            userId: user?.id || null,
+            userName: user?.name || 'Пользователь'
+          } 
+        });
+      } else {
+        // Для существующего потока ищем thread ID и добавляем сообщение
+        const threads = await (await apiFetch('/api/admin/threads')).json().catch(()=> ({}));
+        for(const [tid, t] of Object.entries(threads)) {
+          if(t.some(m => m.text === thread[0]?.text)) {
+            await apiFetch(`/api/threads/${tid}/messages`, { 
+              method: 'POST', 
+              body: { text } 
+            });
+            break;
+          }
+        }
+      }
+    }catch(e){ 
+      console.log('Server message send failed (local cache still works):', e.message);
+    }
+  };
 }
 
 // chat delete from header
@@ -357,22 +385,68 @@ function switchAuthTab(mode){
   }
 }
 
-document.getElementById('reg-submit')?.addEventListener('click', ()=>{
+document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
   const name = document.getElementById('reg-name')?.value?.trim();
   const email = document.getElementById('reg-email')?.value?.trim();
   const pass = document.getElementById('reg-password')?.value || '';
   if(!name || !email || !pass){ alert('Пожалуйста, заполните все поля'); return; }
-  // save simple user object
-  saveUser({name, email});
-  hideAuthModal();
+  
+  try {
+    const res = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: { email, password: pass, name }
+    });
+    const data = await res.json();
+    
+    if(!res.ok) {
+      alert('Ошибка регистрации: ' + (data.error || 'Неизвестная ошибка'));
+      return;
+    }
+    
+    // Регистрация успешна
+    alert('Регистрация успешна! Пожалуйста, проверьте вашу почту для подтверждения аккаунта.');
+    hideAuthModal();
+    document.getElementById('reg-name').value = '';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-password').value = '';
+  } catch(e) {
+    console.error('Registration error:', e);
+    alert('Ошибка при регистрации: ' + e.message);
+  }
 });
 
-document.getElementById('login-submit')?.addEventListener('click', ()=>{
+document.getElementById('login-submit')?.addEventListener('click', async ()=>{
   const email = document.getElementById('login-email')?.value?.trim();
   const pass = document.getElementById('login-password')?.value || '';
   if(!email || !pass){ alert('Пожалуйста, заполните поля'); return; }
-  const user = loadUser();
-  if(user && user.email === email){ hideAuthModal(); } else { alert('Аккаунт не найден. Пожалуйста зарегистрируйтесь.'); showAuthModal('register'); }
+  
+  try {
+    const res = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: { email, password: pass }
+    });
+    const data = await res.json();
+    
+    if(!res.ok) {
+      if(data.error === 'email not verified') {
+        alert('Ваш аккаунт ещё не подтвержден. Проверьте вашу почту.');
+      } else {
+        alert('Ошибка входа: ' + (data.error || 'Неизвестная ошибка'));
+      }
+      return;
+    }
+    
+    // Вход успешен
+    const user = await (await apiFetch('/auth/me')).json();
+    saveUser(user);
+    hideAuthModal();
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+    alert('Вы успешно вошли в аккаунт!');
+  } catch(e) {
+    console.error('Login error:', e);
+    alert('Ошибка при входе: ' + e.message);
+  }
 });
 
 // header menu removed — burger button was intentionally removed from HTML
@@ -505,10 +579,31 @@ function setupCarousel(){
   updateDots();
 }
 
+// Check current user session on load
+async function checkCurrentUser(){
+  try {
+    const res = await apiFetch('/auth/me');
+    if(!res.ok) return null;
+    const user = await res.json();
+    if(user) saveUser(user);
+    return user;
+  } catch(e) {
+    console.log('Session check:', e.message);
+    return null;
+  }
+}
+
 // Init
 (async function(){
   // initialize theme early to avoid flash
   setupThemeOnLoad();
+  
+  // check if user is already logged in
+  const currentUser = await checkCurrentUser();
+  if(currentUser) {
+    console.log('User already logged in:', currentUser.email);
+  }
+  
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
   productsCache = products;
   categoriesCache = categories;
