@@ -349,10 +349,9 @@ function showAuthModal(mode){
   modal.style.display = '';
   modal.setAttribute('aria-hidden','false');
   modal.classList.add('open');
-  // blur background app content while modal is open
   document.querySelector('.app')?.classList.add('blurred');
-  // switch tabs
-  switchAuthTab(mode);
+  // Всегда активировать нужную вкладку и форму
+  switchAuthTab(mode || 'register');
 }
 
 function hideAuthModal(){ const modal = document.getElementById('auth-modal'); if(!modal) return; modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); modal.classList.remove('open'); document.querySelector('.app')?.classList.remove('blurred'); }
@@ -398,22 +397,61 @@ document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
       body: { email, password: pass, name }
     });
     const data = await res.json();
-    
     if(!res.ok) {
       alert('Ошибка регистрации: ' + (data.error || 'Неизвестная ошибка'));
       return;
     }
-    
-    // Регистрация успешна
-    alert('Регистрация успешна! Пожалуйста, проверьте вашу почту для подтверждения аккаунта.');
+    // Регистрация успешна, показать модалку для верификации
     hideAuthModal();
     document.getElementById('reg-name').value = '';
     document.getElementById('reg-email').value = '';
     document.getElementById('reg-password').value = '';
+    showVerifyModal(email);
   } catch(e) {
     console.error('Registration error:', e);
     alert('Ошибка при регистрации: ' + e.message);
   }
+// Верификация
+function showVerifyModal(email) {
+  const modal = document.getElementById('verify-modal');
+  if(!modal) return;
+  modal.style.display = '';
+  modal.setAttribute('aria-hidden','false');
+  modal.classList.add('open');
+  document.getElementById('verify-email').value = email || '';
+}
+
+function hideVerifyModal() {
+  const modal = document.getElementById('verify-modal');
+  if(!modal) return;
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden','true');
+  modal.classList.remove('open');
+}
+
+document.getElementById('verify-submit')?.addEventListener('click', async ()=>{
+  const email = document.getElementById('verify-email')?.value?.trim();
+  const code = document.getElementById('verify-code')?.value?.trim();
+  if(!email || !code){ alert('Введите email и код'); return; }
+  try {
+    const res = await apiFetch('/auth/verify', {
+      method: 'POST',
+      body: { email, code }
+    });
+    const data = await res.json();
+    if(!res.ok) {
+      alert('Ошибка подтверждения: ' + (data.error || 'Неизвестная ошибка'));
+      return;
+    }
+    // Верификация успешна
+    hideVerifyModal();
+    alert('Аккаунт подтверждён! Теперь вы можете войти.');
+    showAuthModal('login');
+  } catch(e) {
+    console.error('Verify error:', e);
+    alert('Ошибка при подтверждении: ' + e.message);
+  }
+});
 });
 
 document.getElementById('login-submit')?.addEventListener('click', async ()=>{

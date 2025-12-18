@@ -198,5 +198,18 @@
       </div>
     </div>
   </div>
+  <!-- Verification modal -->
+  <div class="verify-modal" id="verify-modal" aria-hidden="true" style="display:none">
+    <div class="auth-card">
+      <div class="auth-top">
+        <div class="auth-note">Введите код подтверждения из письма</div>
+      </div>
+      <form id="form-verify" class="auth-form">
+        <input id="verify-email" type="email" placeholder="Email" style="margin-bottom:8px" />
+        <input id="verify-code" type="text" placeholder="Код из письма" />
+        <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
