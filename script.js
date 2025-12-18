@@ -16,6 +16,7 @@ function hideLoaderNow(){
 setTimeout(hideLoaderNow, INITIAL_LOADER_MS);
 
 // No client-side sample products — products are fetched from the server.
+// sampleProducts больше не используются — только серверные товары
 const sampleProducts = [];
 
 // --- Theme handling (dark / light) ---
@@ -79,7 +80,7 @@ async function fetchProducts(){
     if(!res.ok) throw new Error('no api');
     return await res.json();
   }catch(e){
-    return sampleProducts;
+    return [];
   }
 }
 
@@ -600,10 +601,13 @@ async function checkCurrentUser(){
   
   // check if user is already logged in
   const currentUser = await checkCurrentUser();
-  if(currentUser) {
+  if(!currentUser) {
+    // Если пользователь не залогинен — сразу показать окно регистрации
+    showAuthModal('register');
+  } else {
     console.log('User already logged in:', currentUser.email);
   }
-  
+
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
   productsCache = products;
   categoriesCache = categories;
@@ -613,6 +617,5 @@ async function checkCurrentUser(){
   setupTabs(products);
   renderChatList(products);
   attachBuyHandlers();
-  // Note: do NOT auto-open auth modal on load. Modal remains hidden by default.
-  // If needed, server-side logic can call `showAuthModal('login')` later.
+  // Note: теперь окно регистрации открывается автоматически для новых пользователей
 })();
