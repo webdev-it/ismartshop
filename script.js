@@ -344,21 +344,36 @@ function clearUser(){ localStorage.removeItem(USER_KEY); }
 function isLoggedIn(){ return !!loadUser(); }
 
 function showAuthModal(mode){
-  const modal = document.getElementById('auth-modal');
-  if(!modal) return;
-  modal.style.display = '';
-  modal.setAttribute('aria-hidden','false');
-  modal.classList.add('open');
-  document.querySelector('.app')?.classList.add('blurred');
-  // Всегда явно переключаемся, чтобы не было багов с отображением
-  if(mode === 'login') {
-    switchAuthTab('login');
-  } else {
-    switchAuthTab('register');
+  try {
+    const modal = document.getElementById('auth-modal');
+    if(!modal) {
+      console.error('auth-modal element not found');
+      return;
+    }
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden','false');
+    modal.classList.add('open');
+    document.querySelector('.app')?.classList.add('blurred');
+    
+    // Switch to the requested tab
+    switchAuthTab(mode);
+  } catch(e) {
+    console.error('showAuthModal error:', e);
   }
 }
 
-function hideAuthModal(){ const modal = document.getElementById('auth-modal'); if(!modal) return; modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); modal.classList.remove('open'); document.querySelector('.app')?.classList.remove('blurred'); }
+function hideAuthModal(){ 
+  try {
+    const modal = document.getElementById('auth-modal');
+    if(!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden','true');
+    modal.classList.remove('open');
+    document.querySelector('.app')?.classList.remove('blurred');
+  } catch(e) {
+    console.error('hideAuthModal error:', e);
+  }
+}
 
 // helper to switch tabs/forms without toggling modal visibility
 function switchAuthTab(mode){
@@ -403,109 +418,249 @@ document.getElementById('tab-register')?.addEventListener('click', (e)=>{
   switchAuthTab('register');
 });
 
-document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
-  console.log('Клик по кнопке регистрации!');
-  alert('Клик по кнопке регистрации!');
-  const name = document.getElementById('reg-name')?.value?.trim();
-  const email = document.getElementById('reg-email')?.value?.trim();
-  const pass = document.getElementById('reg-password')?.value || '';
-  if(!name || !email || !pass){ alert('Пожалуйста, заполните все поля'); return; }
-
+// Handle registration submission
+document.getElementById('reg-submit')?.addEventListener('click', async () => {
   try {
-    const res = await apiFetch('/auth/register', {
-      method: 'POST',
-      body: { email, password: pass, name }
-    });
-    const data = await res.json();
-    if(!res.ok) {
-      alert('Ошибка регистрации: ' + (data.error || 'Неизвестная ошибка'));
+    const nameInput = document.getElementById('reg-name');
+    const emailInput = document.getElementById('reg-email');
+    const passInput = document.getElementById('reg-password');
+    
+    if (!nameInput || !emailInput || !passInput) {
+      console.error('Registration form inputs not found');
+      alert('Ошибка: элементы формы не найдены');
       return;
     }
-    // Регистрация успешна, показать модалку для верификации
+    
+    const name = nameInput.value?.trim();
+    const email = emailInput.value?.trim();
+    const password = passInput.value || '';
+    
+    // Validate inputs
+    if (!name) {
+      alert('Пожалуйста, заполните имя');
+      nameInput.focus();
+      return;
+    }
+    
+    if (!email) {
+      alert('Пожалуйста, заполните email');
+      emailInput.focus();
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Пожалуйста, введите корректный email');
+      emailInput.focus();
+      return;
+    }
+    
+    if (!password) {
+      alert('Пожалуйста, заполните пароль');
+      passInput.focus();
+      return;
+    }
+    
+    if (password.length < 6) {
+      alert('Пароль должен содержать минимум 6 символов');
+      passInput.focus();
+      return;
+    }
+    
+    // Disable button to prevent double submission
+    const btn = document.getElementById('reg-submit');
+    if (btn) btn.disabled = true;
+    
+    const res = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: { name, email, password }
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      alert('Ошибка регистрации: ' + (data.error || 'Неизвестная ошибка'));
+      if (btn) btn.disabled = false;
+      return;
+    }
+    
+    // Registration successful - show verification modal
     hideAuthModal();
-    document.getElementById('reg-name').value = '';
-    document.getElementById('reg-email').value = '';
-    document.getElementById('reg-password').value = '';
+    
+    // Clear form
+    nameInput.value = '';
+    emailInput.value = '';
+    passInput.value = '';
+    
+    // Show verification modal
     showVerifyModal(email);
-  } catch(e) {
+    
+    if (btn) btn.disabled = false;
+  } catch (e) {
     console.error('Registration error:', e);
     alert('Ошибка при регистрации: ' + e.message);
+    
+    const btn = document.getElementById('reg-submit');
+    if (btn) btn.disabled = false;
   }
 });
 
-// Верификация
+// ============ AUTHENTICATION MODULE ============
+
+// Show verification modal
 function showVerifyModal(email) {
   const modal = document.getElementById('verify-modal');
-  if(!modal) return;
-  modal.style.display = '';
-  modal.setAttribute('aria-hidden','false');
+  if (!modal) {
+    console.error('verify-modal element not found');
+    return;
+  }
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
   modal.classList.add('open');
-  document.getElementById('verify-email').value = email || '';
+  document.querySelector('.app')?.classList.add('blurred');
+  
+  const emailInput = document.getElementById('verify-email');
+  if (emailInput) {
+    emailInput.value = email || '';
+  }
 }
 
+// Hide verification modal
 function hideVerifyModal() {
   const modal = document.getElementById('verify-modal');
-  if(!modal) return;
+  if (!modal) return;
   modal.style.display = 'none';
-  modal.setAttribute('aria-hidden','true');
+  modal.setAttribute('aria-hidden', 'true');
   modal.classList.remove('open');
+  document.querySelector('.app')?.classList.remove('blurred');
+  
+  // Clear form
+  const codeInput = document.getElementById('verify-code');
+  if (codeInput) codeInput.value = '';
 }
 
-document.getElementById('verify-submit')?.addEventListener('click', async ()=>{
-  const email = document.getElementById('verify-email')?.value?.trim();
-  const code = document.getElementById('verify-code')?.value?.trim();
-  if(!email || !code){ alert('Введите email и код'); return; }
+// Handle verification submission
+document.getElementById('verify-submit')?.addEventListener('click', async () => {
   try {
+    const emailInput = document.getElementById('verify-email');
+    const codeInput = document.getElementById('verify-code');
+    
+    if (!emailInput || !codeInput) {
+      console.error('Verify form inputs not found');
+      alert('Ошибка: элементы формы не найдены');
+      return;
+    }
+    
+    const email = emailInput.value?.trim();
+    const code = codeInput.value?.trim();
+    
+    if (!email || !code) {
+      alert('Пожалуйста, заполните email и код подтверждения');
+      return;
+    }
+    
+    // Disable button to prevent double submission
+    const btn = document.getElementById('verify-submit');
+    if (btn) btn.disabled = true;
+    
     const res = await apiFetch('/auth/verify', {
       method: 'POST',
       body: { email, code }
     });
+    
     const data = await res.json();
-    if(!res.ok) {
+    
+    if (!res.ok) {
       alert('Ошибка подтверждения: ' + (data.error || 'Неизвестная ошибка'));
+      if (btn) btn.disabled = false;
       return;
     }
-    // Верификация успешна
+    
+    // Verification successful
     hideVerifyModal();
     alert('Аккаунт подтверждён! Теперь вы можете войти.');
     showAuthModal('login');
-  } catch(e) {
+    
+    if (btn) btn.disabled = false;
+  } catch (e) {
     console.error('Verify error:', e);
     alert('Ошибка при подтверждении: ' + e.message);
+    
+    const btn = document.getElementById('verify-submit');
+    if (btn) btn.disabled = false;
   }
 });
 
-document.getElementById('login-submit')?.addEventListener('click', async ()=>{
-  const email = document.getElementById('login-email')?.value?.trim();
-  const pass = document.getElementById('login-password')?.value || '';
-  if(!email || !pass){ alert('Пожалуйста, заполните поля'); return; }
-  
+// Handle login submission
+document.getElementById('login-submit')?.addEventListener('click', async () => {
   try {
-    const res = await apiFetch('/auth/login', {
-      method: 'POST',
-      body: { email, password: pass }
-    });
-    const data = await res.json();
+    const emailInput = document.getElementById('login-email');
+    const passInput = document.getElementById('login-password');
     
-    if(!res.ok) {
-      if(data.error === 'email not verified') {
-        alert('Ваш аккаунт ещё не подтвержден. Проверьте вашу почту.');
-      } else {
-        alert('Ошибка входа: ' + (data.error || 'Неизвестная ошибка'));
-      }
+    if (!emailInput || !passInput) {
+      console.error('Login form inputs not found');
+      alert('Ошибка: элементы формы не найдены');
       return;
     }
     
-    // Вход успешен
-    const user = await (await apiFetch('/auth/me')).json();
-    saveUser(user);
+    const email = emailInput.value?.trim();
+    const password = passInput.value || '';
+    
+    if (!email || !password) {
+      alert('Пожалуйста, заполните email и пароль');
+      return;
+    }
+    
+    // Disable button to prevent double submission
+    const btn = document.getElementById('login-submit');
+    if (btn) btn.disabled = true;
+    
+    const res = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: { email, password }
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      if (data.error === 'email not verified') {
+        alert('Ваш аккаунт ещё не подтвержден. Проверьте почту для кода подтверждения.');
+      } else {
+        alert('Ошибка входа: ' + (data.error || 'Неизвестная ошибка'));
+      }
+      if (btn) btn.disabled = false;
+      return;
+    }
+    
+    // Login successful
+    try {
+      const userRes = await apiFetch('/auth/me');
+      if (userRes.ok) {
+        const user = await userRes.json();
+        if (user) {
+          saveUser(user);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch user:', e);
+    }
+    
     hideAuthModal();
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-password').value = '';
+    
+    // Clear form
+    emailInput.value = '';
+    passInput.value = '';
+    
     alert('Вы успешно вошли в аккаунт!');
-  } catch(e) {
+    
+    if (btn) btn.disabled = false;
+  } catch (e) {
     console.error('Login error:', e);
     alert('Ошибка при входе: ' + e.message);
+    
+    const btn = document.getElementById('login-submit');
+    if (btn) btn.disabled = false;
   }
 });
 
