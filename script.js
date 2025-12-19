@@ -350,8 +350,12 @@ function showAuthModal(mode){
   modal.setAttribute('aria-hidden','false');
   modal.classList.add('open');
   document.querySelector('.app')?.classList.add('blurred');
-  // Всегда активировать нужную вкладку и форму
-  switchAuthTab(mode || 'register');
+  // Всегда явно переключаемся, чтобы не было багов с отображением
+  if(mode === 'login') {
+    switchAuthTab('login');
+  } else {
+    switchAuthTab('register');
+  }
 }
 
 function hideAuthModal(){ const modal = document.getElementById('auth-modal'); if(!modal) return; modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); modal.classList.remove('open'); document.querySelector('.app')?.classList.remove('blurred'); }
@@ -359,14 +363,12 @@ function hideAuthModal(){ const modal = document.getElementById('auth-modal'); i
 // bind auth UI controls
 // Tabs: if modal already open just switch tabs, otherwise open modal + select tab
 document.getElementById('tab-login')?.addEventListener('click', (e)=>{
-  e.preventDefault(); const modal = document.getElementById('auth-modal');
-  if(modal && modal.getAttribute('aria-hidden') === 'false') { switchAuthTab('login'); }
-  else { showAuthModal('login'); }
+  e.preventDefault();
+  showAuthModal('login');
 });
 document.getElementById('tab-register')?.addEventListener('click', (e)=>{
-  e.preventDefault(); const modal = document.getElementById('auth-modal');
-  if(modal && modal.getAttribute('aria-hidden') === 'false') { switchAuthTab('register'); }
-  else { showAuthModal('register'); }
+  e.preventDefault();
+  showAuthModal('register');
 });
 
 // helper to switch tabs/forms without toggling modal visibility
