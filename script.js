@@ -393,6 +393,7 @@ document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
   const pass = document.getElementById('reg-password')?.value || '';
   if(!name || !email || !pass){ alert('Пожалуйста, заполните все поля'); return; }
   
+
   try {
     const res = await apiFetch('/auth/register', {
       method: 'POST',
@@ -413,6 +414,8 @@ document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
     console.error('Registration error:', e);
     alert('Ошибка при регистрации: ' + e.message);
   }
+});
+
 // Верификация
 function showVerifyModal(email) {
   const modal = document.getElementById('verify-modal');
