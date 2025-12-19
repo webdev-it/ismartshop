@@ -360,39 +360,56 @@ function showAuthModal(mode){
 
 function hideAuthModal(){ const modal = document.getElementById('auth-modal'); if(!modal) return; modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); modal.classList.remove('open'); document.querySelector('.app')?.classList.remove('blurred'); }
 
+// helper to switch tabs/forms without toggling modal visibility
+function switchAuthTab(mode){
+  // Remove active class from all tabs
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  // Hide all forms
+  document.querySelectorAll('.auth-form').forEach(f=> f.style.display = 'none');
+  
+  if(mode === 'register'){
+    const tabRegister = document.getElementById('tab-register');
+    const formRegister = document.getElementById('form-register');
+    if(tabRegister) tabRegister.classList.add('active');
+    if(formRegister) formRegister.style.display = 'block';
+    // focus first input in register
+    setTimeout(()=> {
+      const input = document.getElementById('reg-name');
+      if(input) input.focus();
+    }, 10);
+  } else {
+    // default to login
+    const tabLogin = document.getElementById('tab-login');
+    const formLogin = document.getElementById('form-login');
+    if(tabLogin) tabLogin.classList.add('active');
+    if(formLogin) formLogin.style.display = 'block';
+    setTimeout(()=> {
+      const input = document.getElementById('login-email');
+      if(input) input.focus();
+    }, 10);
+  }
+}
+
 // bind auth UI controls
 // Tabs: if modal already open just switch tabs, otherwise open modal + select tab
 document.getElementById('tab-login')?.addEventListener('click', (e)=>{
   e.preventDefault();
-  showAuthModal('login');
+  e.stopPropagation();
+  switchAuthTab('login');
 });
 document.getElementById('tab-register')?.addEventListener('click', (e)=>{
   e.preventDefault();
-  showAuthModal('register');
+  e.stopPropagation();
+  switchAuthTab('register');
 });
 
-// helper to switch tabs/forms without toggling modal visibility
-function switchAuthTab(mode){
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.auth-form').forEach(f=> f.style.display = 'none');
-  if(mode === 'register'){
-    document.getElementById('tab-register')?.classList.add('active');
-    document.getElementById('form-register').style.display = '';
-    // focus first input in register
-    setTimeout(()=> document.getElementById('reg-name')?.focus(), 10);
-  } else {
-    document.getElementById('tab-login')?.classList.add('active');
-    document.getElementById('form-login').style.display = '';
-    setTimeout(()=> document.getElementById('login-email')?.focus(), 10);
-  }
-}
-
 document.getElementById('reg-submit')?.addEventListener('click', async ()=>{
+  console.log('Клик по кнопке регистрации!');
+  alert('Клик по кнопке регистрации!');
   const name = document.getElementById('reg-name')?.value?.trim();
   const email = document.getElementById('reg-email')?.value?.trim();
   const pass = document.getElementById('reg-password')?.value || '';
   if(!name || !email || !pass){ alert('Пожалуйста, заполните все поля'); return; }
-  
 
   try {
     const res = await apiFetch('/auth/register', {

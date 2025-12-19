@@ -445,3 +445,9 @@ body{
 .nav-btn{display:block;background:transparent;border:0;padding:10px 6px;text-align:left;cursor:pointer}
 .nav-btn.active{background:var(--pill-bg);border-radius:8px}
 
+/* Verification modal styles */
+.verify-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,0.12)}
+.verify-modal[aria-hidden="true"]{display:none}
+.verify-modal.open{background:rgba(0,0,0,0.22)}
+.verify-modal .auth-card{opacity:0;transform:translateY(10px) scale(0.985);transition:transform 260ms cubic-bezier(.2,.9,.3,1),opacity 240ms ease}
+.verify-modal.open .auth-card{opacity:1;transform:none}

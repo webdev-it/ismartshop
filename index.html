@@ -182,13 +182,13 @@
         <button id="tab-register" class="auth-tab">Регистрация</button>
       </div>
       <div class="auth-forms">
-        <form id="form-login" class="auth-form" style="display:none">
+        <form id="form-login" class="auth-form" style="display:none" onsubmit="return false">
           <h2>Войти</h2>
           <input id="login-email" placeholder="Адрес электронной почты" type="email" />
           <input id="login-password" placeholder="Пароль" type="password" />
           <button id="login-submit" class="primary-cta" type="button">Войти</button>
         </form>
-        <form id="form-register" class="auth-form" style="display:none">
+        <form id="form-register" class="auth-form" style="display:none" onsubmit="return false">
           <h2>Регистрация</h2>
           <input id="reg-name" placeholder="Имя" type="text" />
           <input id="reg-email" placeholder="Адрес электронной почты" type="email" />
@@ -204,7 +204,7 @@
       <div class="auth-top">
         <div class="auth-note">Введите код подтверждения из письма</div>
       </div>
-      <form id="form-verify" class="auth-form">
+      <form id="form-verify" class="auth-form" onsubmit="return false">
         <input id="verify-email" type="email" placeholder="Email" style="margin-bottom:8px" />
         <input id="verify-code" type="text" placeholder="Код из письма" />
         <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
