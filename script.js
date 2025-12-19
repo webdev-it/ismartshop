@@ -457,7 +457,6 @@ document.getElementById('verify-submit')?.addEventListener('click', async ()=>{
     alert('Ошибка при подтверждении: ' + e.message);
   }
 });
-});
 
 document.getElementById('login-submit')?.addEventListener('click', async ()=>{
   const email = document.getElementById('login-email')?.value?.trim();
