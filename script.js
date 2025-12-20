@@ -490,8 +490,10 @@ function hideVerifyModal() {
 function initRegistration() {
   const submitBtn = document.getElementById('reg-submit');
   if (!submitBtn) return;
+  console.log('initRegistration: submit button found');
   
   submitBtn.addEventListener('click', async (e) => {
+    console.log('initRegistration: submit clicked');
     e.preventDefault();
     
     const nameInput = document.getElementById('reg-name');
@@ -567,8 +569,10 @@ function initRegistration() {
 function initVerification() {
   const submitBtn = document.getElementById('verify-submit');
   if (!submitBtn) return;
+  console.log('initVerification: submit button found');
   
   submitBtn.addEventListener('click', async (e) => {
+    console.log('initVerification: submit clicked');
     e.preventDefault();
     
     const emailInput = document.getElementById('verify-email');
@@ -625,8 +629,10 @@ function initVerification() {
 function initLogin() {
   const submitBtn = document.getElementById('login-submit');
   if (!submitBtn) return;
+  console.log('initLogin: submit button found');
   
   submitBtn.addEventListener('click', async (e) => {
+    console.log('initLogin: submit clicked');
     e.preventDefault();
     
     const emailInput = document.getElementById('login-email');
@@ -838,16 +844,111 @@ async function checkCurrentUser(){
   }
 }
 
-// Init
-(async function(){
+// Prevent unhandled form submissions
+document.addEventListener('submit', (e) => {
+  e.preventDefault();
+  console.warn('Unhandled form submission prevented:', e.target);
+});
+
+// Instrumentation: detect image load errors and suspicious image src values (like '/po')
+(function(){
+  function reportImageIssue(details){
+    try{
+      console.warn('Reporting image issue', details);
+      // Best-effort: send details to backend for logging (no need for response)
+      if(navigator && navigator.sendBeacon){
+        const url = (window.ISMART_API_BASE || '') + '/api/log-image-error';
+        const blob = new Blob([JSON.stringify(details)], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch((window.ISMART_API_BASE || '') + '/api/log-image-error', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(details)
+        }).catch(()=>{});
+      }
+    }catch(e){/* ignore */}
+  }
+
+  // Catch image load errors
+  window.addEventListener('error', (e) => {
+    const t = e.target || e.srcElement;
+    if(t && t.tagName === 'IMG'){
+      const details = { type: 'img-error', src: t.currentSrc || t.src || null, outerHTML: t.outerHTML, page: location.href, time: Date.now() };
+      console.warn('Image load error detected:', details);
+      reportImageIssue(details);
+    }
+  }, true);
+
+  // Watch for images added dynamically or changed
+  const observer = new MutationObserver((records) => {
+    for(const rec of records){
+      for(const node of rec.addedNodes || []){
+        if(node && node.tagName === 'IMG'){
+          const src = node.getAttribute('src') || node.getAttribute('data-src') || '';
+          if(src === '/po' || src === 'po' || src.endsWith('/po')){
+            const details = { type: 'img-src-suspicious', src, outerHTML: node.outerHTML, page: location.href, time: Date.now() };
+            console.warn('Suspicious image src detected:', details);
+            reportImageIssue(details);
+          }
+        }
+      }
+      // attribute changes
+      if(rec.type === 'attributes' && rec.target && rec.target.tagName === 'IMG'){
+        const src = rec.target.getAttribute('src') || '';
+        if(src === '/po' || src === 'po' || src.endsWith('/po')){
+          const details = { type: 'img-src-suspicious', src, outerHTML: rec.target.outerHTML, page: location.href, time: Date.now() };
+          console.warn('Suspicious image src changed:', details);
+          reportImageIssue(details);
+        }
+      }
+    }
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+
+  // Initial scan for any existing imgs with suspicious src
+  document.querySelectorAll('img').forEach(img => {
+    const src = img.getAttribute('src') || img.getAttribute('data-src') || img.src || '';
+    if(src === '/po' || src === 'po' || (src && src.endsWith('/po'))){
+      const details = { type: 'img-src-suspicious', src, outerHTML: img.outerHTML, page: location.href, time: Date.now() };
+      console.warn('Suspicious image src found at init:', details);
+      reportImageIssue(details);
+    }
+  });
+})();
+
+// Init (run after DOM is ready)
+function onReady(fn){
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+  else fn();
+}
+
+onReady(async function(){
   // initialize theme early to avoid flash
   setupThemeOnLoad();
   
+  // sanitize images to avoid requests to unexpected paths like '/po'
+  (function sanitizeImages(){
+    const placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    document.querySelectorAll('img').forEach(img=>{
+      try{
+        const src = (img.getAttribute('src') || '').trim();
+        if(!src || src === 'po' || src === '/po' || src.endsWith('/po')){
+          console.warn('Sanitizing image src', src, img);
+          img.dataset.origSrc = src;
+          img.src = placeholder;
+          // report to backend for debugging
+          try{ if(navigator && navigator.sendBeacon){ navigator.sendBeacon((window.ISMART_API_BASE||'') + '/api/log-image-error', new Blob([JSON.stringify({ type:'sanitized', src, outerHTML: img.outerHTML, page: location.href, time: Date.now() })], { type: 'application/json' })); } }catch(e){}
+        }
+      }catch(e){/* ignore */}
+    });
+  })();
+
   // Initialize auth handlers
   initAuthTabs();
   initRegistration();
   initLogin();
   initVerification();
+  console.log('Auth handlers initialized');
   
   // check if user is already logged in
   const currentUser = await checkCurrentUser();
@@ -867,4 +968,4 @@ async function checkCurrentUser(){
   setupTabs(products);
   renderChatList(products);
   attachBuyHandlers();
-})();
+});

@@ -3,11 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta name="description" content="iSmartShop — онлайн-магазин iPhone, Samsung, MacBook и аксессуаров. Купить смартфон по выгодной цене с доставкой.">
   <title>iSmartShop — Магазин цифровой техники</title>
   <link rel="stylesheet" href="styles.css" />
   <script>
     // Backend API base (deployed on Render)
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
+  </script>
+  <script>
+    // Early sanitizer to block suspicious image src values (runs before body parsing completes)
+    (function(){
+      try{
+        const blockIfSuspicious = (src)=>{
+          if(!src) return false;
+          const s = String(src).trim();
+          return s === '/po' || s === 'po' || s.endsWith('/po');
+        };
+
+        // Override HTMLImageElement.src setter to block JS assignments
+        const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+        if(desc && desc.set){
+          Object.defineProperty(HTMLImageElement.prototype, 'src', {
+            set(v){ try{ if(blockIfSuspicious(v)){ console.warn('Blocked image.src assignment', v); return; } }catch(e){}
+              return desc.set.call(this, v);
+            },
+            get(){ return desc.get.call(this); },
+            configurable: true
+          });
+        }
+
+        // MutationObserver to sanitize images inserted into DOM during parsing
+        const observer = new MutationObserver((recs)=>{
+          for(const rec of recs){
+            for(const node of rec.addedNodes || []){
+              if(node && node.tagName === 'IMG'){
+                try{ const src = node.getAttribute('src') || node.getAttribute('data-src') || ''; if(blockIfSuspicious(src)){ node.removeAttribute('src'); node.dataset.blocked = src; console.warn('Removed suspicious img src at parse time', src); } }catch(e){}
+              }
+            }
+            if(rec.type === 'attributes' && rec.target && rec.target.tagName === 'IMG'){
+              try{ const src = rec.target.getAttribute('src') || ''; if(blockIfSuspicious(src)){ rec.target.removeAttribute('src'); rec.target.dataset.blocked = src; console.warn('Removed suspicious img src (attr change)', src); } }catch(e){}
+            }
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter:['src'] });
+      }catch(e){/* ignore */}
+    })();
   </script>
 </head>
 <body class="loading">
