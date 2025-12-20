@@ -552,7 +552,13 @@ function initRegistration() {
       nameInput.value = '';
       emailInput.value = '';
       passInput.value = '';
-      showVerifyModal(email);
+      // If server returned the code (debug mode), show it to the user so they can verify without email
+      if (data && data.code) {
+        alert('Код подтверждения (debug): ' + data.code);
+        showVerifyModal(email);
+      } else {
+        showVerifyModal(email);
+      }
       
       submitBtn.disabled = false;
       submitBtn.textContent = 'Зарегистрироваться';
