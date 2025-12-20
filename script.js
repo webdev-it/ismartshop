@@ -336,190 +336,129 @@ function attachFavoriteHandlers(){
   });
 }
 
-// --- Simple client-side auth (no backend yet) ---
-const USER_KEY = 'ismart_user_v1';
-function loadUser(){ try{ return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }catch(e){return null} }
-function saveUser(u){ localStorage.setItem(USER_KEY, JSON.stringify(u)); }
-function clearUser(){ localStorage.removeItem(USER_KEY); }
-function isLoggedIn(){ return !!loadUser(); }
-
-function showAuthModal(mode){
-  try {
-    const modal = document.getElementById('auth-modal');
-    if(!modal) {
-      console.error('auth-modal element not found');
-      return;
-    }
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden','false');
-    modal.classList.add('open');
-    document.querySelector('.app')?.classList.add('blurred');
-    
-    // Switch to the requested tab
-    switchAuthTab(mode);
-  } catch(e) {
-    console.error('showAuthModal error:', e);
-  }
-}
-
-function hideAuthModal(){ 
-  try {
-    const modal = document.getElementById('auth-modal');
-    if(!modal) return;
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden','true');
-    modal.classList.remove('open');
-    document.querySelector('.app')?.classList.remove('blurred');
-  } catch(e) {
-    console.error('hideAuthModal error:', e);
-  }
-}
-
-// helper to switch tabs/forms without toggling modal visibility
-function switchAuthTab(mode){
-  // Remove active class from all tabs
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
-  // Hide all forms
-  document.querySelectorAll('.auth-form').forEach(f=> f.style.display = 'none');
-  
-  if(mode === 'register'){
-    const tabRegister = document.getElementById('tab-register');
-    const formRegister = document.getElementById('form-register');
-    if(tabRegister) tabRegister.classList.add('active');
-    if(formRegister) formRegister.style.display = 'block';
-    // focus first input in register
-    setTimeout(()=> {
-      const input = document.getElementById('reg-name');
-      if(input) input.focus();
-    }, 10);
-  } else {
-    // default to login
-    const tabLogin = document.getElementById('tab-login');
-    const formLogin = document.getElementById('form-login');
-    if(tabLogin) tabLogin.classList.add('active');
-    if(formLogin) formLogin.style.display = 'block';
-    setTimeout(()=> {
-      const input = document.getElementById('login-email');
-      if(input) input.focus();
-    }, 10);
-  }
-}
-
-// bind auth UI controls
-// Tabs: if modal already open just switch tabs, otherwise open modal + select tab
-document.getElementById('tab-login')?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  e.stopPropagation();
-  switchAuthTab('login');
-});
-document.getElementById('tab-register')?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  e.stopPropagation();
-  switchAuthTab('register');
-});
-
-// Handle registration submission
-document.getElementById('reg-submit')?.addEventListener('click', async () => {
-  try {
-    const nameInput = document.getElementById('reg-name');
-    const emailInput = document.getElementById('reg-email');
-    const passInput = document.getElementById('reg-password');
-    
-    if (!nameInput || !emailInput || !passInput) {
-      console.error('Registration form inputs not found');
-      alert('Ошибка: элементы формы не найдены');
-      return;
-    }
-    
-    const name = nameInput.value?.trim();
-    const email = emailInput.value?.trim();
-    const password = passInput.value || '';
-    
-    // Validate inputs
-    if (!name) {
-      alert('Пожалуйста, заполните имя');
-      nameInput.focus();
-      return;
-    }
-    
-    if (!email) {
-      alert('Пожалуйста, заполните email');
-      emailInput.focus();
-      return;
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert('Пожалуйста, введите корректный email');
-      emailInput.focus();
-      return;
-    }
-    
-    if (!password) {
-      alert('Пожалуйста, заполните пароль');
-      passInput.focus();
-      return;
-    }
-    
-    if (password.length < 6) {
-      alert('Пароль должен содержать минимум 6 символов');
-      passInput.focus();
-      return;
-    }
-    
-    // Disable button to prevent double submission
-    const btn = document.getElementById('reg-submit');
-    if (btn) btn.disabled = true;
-    
-    const res = await apiFetch('/auth/register', {
-      method: 'POST',
-      body: { name, email, password }
-    });
-    
-    const data = await res.json();
-    
-    if (!res.ok) {
-      alert('Ошибка регистрации: ' + (data.error || 'Неизвестная ошибка'));
-      if (btn) btn.disabled = false;
-      return;
-    }
-    
-    // Registration successful - show verification modal
-    hideAuthModal();
-    
-    // Clear form
-    nameInput.value = '';
-    emailInput.value = '';
-    passInput.value = '';
-    
-    // Show verification modal
-    showVerifyModal(email);
-    
-    if (btn) btn.disabled = false;
-  } catch (e) {
-    console.error('Registration error:', e);
-    alert('Ошибка при регистрации: ' + e.message);
-    
-    const btn = document.getElementById('reg-submit');
-    if (btn) btn.disabled = false;
-  }
-});
-
 // ============ AUTHENTICATION MODULE ============
+
+const USER_KEY = 'ismart_user_v1';
+
+function loadUser() { 
+  try { 
+    return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); 
+  } catch(e) { 
+    return null;
+  } 
+}
+
+function saveUser(u) { 
+  if(u) {
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+  }
+}
+
+function clearUser() { 
+  localStorage.removeItem(USER_KEY); 
+}
+
+function isLoggedIn() { 
+  return !!loadUser(); 
+}
+
+// Show auth modal with proper error checking
+function showAuthModal(mode) {
+  const modal = document.getElementById('auth-modal');
+  if (!modal) {
+    console.warn('Auth modal element not found in DOM');
+    return;
+  }
+  
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  modal.classList.add('open');
+  
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.add('blurred');
+  }
+  
+  // Switch tab
+  switchAuthTab(mode || 'login');
+}
+
+// Hide auth modal
+function hideAuthModal() { 
+  const modal = document.getElementById('auth-modal');
+  if (!modal) return;
+  
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.remove('open');
+  
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.remove('blurred');
+  }
+}
+
+// Switch between login and register tabs
+function switchAuthTab(mode) {
+  // Clear all active states
+  document.querySelectorAll('.auth-tab').forEach(el => {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.auth-form').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  if (mode === 'register') {
+    const tab = document.getElementById('tab-register');
+    const form = document.getElementById('form-register');
+    if (tab) tab.classList.add('active');
+    if (form) form.style.display = 'block';
+  } else {
+    const tab = document.getElementById('tab-login');
+    const form = document.getElementById('form-login');
+    if (tab) tab.classList.add('active');
+    if (form) form.style.display = 'block';
+  }
+}
+
+// Initialize auth tab buttons
+function initAuthTabs() {
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  
+  if (tabLogin) {
+    tabLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchAuthTab('login');
+    });
+  }
+  
+  if (tabRegister) {
+    tabRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchAuthTab('register');
+    });
+  }
+}
 
 // Show verification modal
 function showVerifyModal(email) {
   const modal = document.getElementById('verify-modal');
   if (!modal) {
-    console.error('verify-modal element not found');
+    console.warn('Verify modal element not found in DOM');
     return;
   }
+  
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
   modal.classList.add('open');
-  document.querySelector('.app')?.classList.add('blurred');
   
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.add('blurred');
+  }
+  
+  // Pre-fill email
   const emailInput = document.getElementById('verify-email');
   if (emailInput) {
     emailInput.value = email || '';
@@ -530,139 +469,230 @@ function showVerifyModal(email) {
 function hideVerifyModal() {
   const modal = document.getElementById('verify-modal');
   if (!modal) return;
+  
   modal.style.display = 'none';
   modal.setAttribute('aria-hidden', 'true');
   modal.classList.remove('open');
-  document.querySelector('.app')?.classList.remove('blurred');
   
-  // Clear form
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.remove('blurred');
+  }
+  
+  // Clear inputs
+  const emailInput = document.getElementById('verify-email');
   const codeInput = document.getElementById('verify-code');
+  if (emailInput) emailInput.value = '';
   if (codeInput) codeInput.value = '';
 }
 
-// Handle verification submission
-document.getElementById('verify-submit')?.addEventListener('click', async () => {
-  try {
+// Handle registration
+function initRegistration() {
+  const submitBtn = document.getElementById('reg-submit');
+  if (!submitBtn) return;
+  
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const nameInput = document.getElementById('reg-name');
+    const emailInput = document.getElementById('reg-email');
+    const passInput = document.getElementById('reg-password');
+    
+    if (!nameInput || !emailInput || !passInput) {
+      alert('Ошибка: элементы формы не найдены');
+      return;
+    }
+    
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passInput.value;
+    
+    // Validation
+    if (!name) {
+      alert('Введите имя');
+      nameInput.focus();
+      return;
+    }
+    
+    if (!email || !email.includes('@')) {
+      alert('Введите корректный email');
+      emailInput.focus();
+      return;
+    }
+    
+    if (!password || password.length < 6) {
+      alert('Пароль должен быть не менее 6 символов');
+      passInput.focus();
+      return;
+    }
+    
+    // Disable button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Загрузка...';
+    
+    try {
+      const res = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: { name, email, password }
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Зарегистрироваться';
+        return;
+      }
+      
+      // Success
+      hideAuthModal();
+      nameInput.value = '';
+      emailInput.value = '';
+      passInput.value = '';
+      showVerifyModal(email);
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Зарегистрироваться';
+    } catch (err) {
+      console.error('Registration error:', err);
+      alert('Ошибка регистрации: ' + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Зарегистрироваться';
+    }
+  });
+}
+
+// Handle verification
+function initVerification() {
+  const submitBtn = document.getElementById('verify-submit');
+  if (!submitBtn) return;
+  
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
     const emailInput = document.getElementById('verify-email');
     const codeInput = document.getElementById('verify-code');
     
     if (!emailInput || !codeInput) {
-      console.error('Verify form inputs not found');
       alert('Ошибка: элементы формы не найдены');
       return;
     }
     
-    const email = emailInput.value?.trim();
-    const code = codeInput.value?.trim();
+    const email = emailInput.value.trim();
+    const code = codeInput.value.trim();
     
     if (!email || !code) {
-      alert('Пожалуйста, заполните email и код подтверждения');
+      alert('Введите email и код');
       return;
     }
     
-    // Disable button to prevent double submission
-    const btn = document.getElementById('verify-submit');
-    if (btn) btn.disabled = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Загрузка...';
     
-    const res = await apiFetch('/auth/verify', {
-      method: 'POST',
-      body: { email, code }
-    });
-    
-    const data = await res.json();
-    
-    if (!res.ok) {
-      alert('Ошибка подтверждения: ' + (data.error || 'Неизвестная ошибка'));
-      if (btn) btn.disabled = false;
-      return;
+    try {
+      const res = await apiFetch('/auth/verify', {
+        method: 'POST',
+        body: { email, code }
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert('Ошибка: ' + (data.error || 'Неверный код'));
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Подтвердить';
+        return;
+      }
+      
+      // Success
+      hideVerifyModal();
+      alert('Аккаунт подтверждён!');
+      showAuthModal('login');
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Подтвердить';
+    } catch (err) {
+      console.error('Verification error:', err);
+      alert('Ошибка подтверждения: ' + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Подтвердить';
     }
-    
-    // Verification successful
-    hideVerifyModal();
-    alert('Аккаунт подтверждён! Теперь вы можете войти.');
-    showAuthModal('login');
-    
-    if (btn) btn.disabled = false;
-  } catch (e) {
-    console.error('Verify error:', e);
-    alert('Ошибка при подтверждении: ' + e.message);
-    
-    const btn = document.getElementById('verify-submit');
-    if (btn) btn.disabled = false;
-  }
-});
+  });
+}
 
-// Handle login submission
-document.getElementById('login-submit')?.addEventListener('click', async () => {
-  try {
+// Handle login
+function initLogin() {
+  const submitBtn = document.getElementById('login-submit');
+  if (!submitBtn) return;
+  
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-password');
     
     if (!emailInput || !passInput) {
-      console.error('Login form inputs not found');
       alert('Ошибка: элементы формы не найдены');
       return;
     }
     
-    const email = emailInput.value?.trim();
-    const password = passInput.value || '';
+    const email = emailInput.value.trim();
+    const password = passInput.value;
     
     if (!email || !password) {
-      alert('Пожалуйста, заполните email и пароль');
+      alert('Введите email и пароль');
       return;
     }
     
-    // Disable button to prevent double submission
-    const btn = document.getElementById('login-submit');
-    if (btn) btn.disabled = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Загрузка...';
     
-    const res = await apiFetch('/auth/login', {
-      method: 'POST',
-      body: { email, password }
-    });
-    
-    const data = await res.json();
-    
-    if (!res.ok) {
-      if (data.error === 'email not verified') {
-        alert('Ваш аккаунт ещё не подтвержден. Проверьте почту для кода подтверждения.');
-      } else {
-        alert('Ошибка входа: ' + (data.error || 'Неизвестная ошибка'));
-      }
-      if (btn) btn.disabled = false;
-      return;
-    }
-    
-    // Login successful
     try {
-      const userRes = await apiFetch('/auth/me');
-      if (userRes.ok) {
-        const user = await userRes.json();
-        if (user) {
-          saveUser(user);
-        }
+      const res = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: { email, password }
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert('Ошибка: ' + (data.error || 'Неверные учетные данные'));
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Войти';
+        return;
       }
-    } catch (e) {
-      console.error('Failed to fetch user:', e);
+      
+      // Fetch user data
+      try {
+        const userRes = await apiFetch('/auth/me');
+        if (userRes.ok) {
+          const user = await userRes.json();
+          if (user) saveUser(user);
+        }
+      } catch (e) {
+        console.warn('Could not fetch user profile');
+      }
+      
+      // Success
+      hideAuthModal();
+      emailInput.value = '';
+      passInput.value = '';
+      alert('Добро пожаловать!');
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Войти';
+      
+      // Reload page to reflect logged-in state
+      location.reload();
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Ошибка входа: ' + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Войти';
     }
-    
-    hideAuthModal();
-    
-    // Clear form
-    emailInput.value = '';
-    passInput.value = '';
-    
-    alert('Вы успешно вошли в аккаунт!');
-    
-    if (btn) btn.disabled = false;
-  } catch (e) {
-    console.error('Login error:', e);
-    alert('Ошибка при входе: ' + e.message);
-    
-    const btn = document.getElementById('login-submit');
-    if (btn) btn.disabled = false;
-  }
-});
+  });
+}
 
 // header menu removed — burger button was intentionally removed from HTML
 
@@ -813,6 +843,12 @@ async function checkCurrentUser(){
   // initialize theme early to avoid flash
   setupThemeOnLoad();
   
+  // Initialize auth handlers
+  initAuthTabs();
+  initRegistration();
+  initLogin();
+  initVerification();
+  
   // check if user is already logged in
   const currentUser = await checkCurrentUser();
   if(!currentUser) {
@@ -831,5 +867,4 @@ async function checkCurrentUser(){
   setupTabs(products);
   renderChatList(products);
   attachBuyHandlers();
-  // Note: теперь окно регистрации открывается автоматически для новых пользователей
 })();
