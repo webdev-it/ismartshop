@@ -661,6 +661,7 @@ function initVerification() {
       }catch(err){ console.error('Resend error', err); alert('Ошибка при отправке кода'); }
     });
 }
+}
 
 // Handle login
 function initLogin() {
