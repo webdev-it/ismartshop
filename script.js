@@ -491,8 +491,11 @@ function initRegistration() {
   const submitBtn = document.getElementById('reg-submit');
   if (!submitBtn) return;
   console.log('initRegistration: submit button found');
+  let inProgress = false;
   
   submitBtn.addEventListener('click', async (e) => {
+    if(inProgress) return;
+    inProgress = true;
     console.log('initRegistration: submit clicked');
     e.preventDefault();
     
@@ -541,7 +544,13 @@ function initRegistration() {
       const data = await res.json();
       
       if (!res.ok) {
-        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        // Specific handling for 409 - offer to go to login
+        if (res.status === 409) {
+          const msg = (data && data.error) ? data.error : 'Email уже зарегистрирован';
+          if (confirm(msg + '. Перейти к входу?')) showAuthModal('login');
+        } else {
+          alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
         submitBtn.disabled = false;
         submitBtn.textContent = 'Зарегистрироваться';
         return;
@@ -557,6 +566,10 @@ function initRegistration() {
         alert('Код подтверждения (debug): ' + data.code);
         showVerifyModal(email);
       } else {
+        // If response message indicates a resend, inform the user
+        if (data && typeof data.message === 'string' && data.message.toLowerCase().includes('resent')) {
+          alert('Код подтверждения отправлен повторно, проверьте почту.');
+        }
         showVerifyModal(email);
       }
       
@@ -567,6 +580,7 @@ function initRegistration() {
       alert('Ошибка регистрации: ' + err.message);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Зарегистрироваться';
+      inProgress = false;
     }
   });
 }
@@ -574,6 +588,7 @@ function initRegistration() {
 // Handle verification
 function initVerification() {
   const submitBtn = document.getElementById('verify-submit');
+  const resendBtn = document.getElementById('verify-resend');
   if (!submitBtn) return;
   console.log('initVerification: submit button found');
   
@@ -629,6 +644,45 @@ function initVerification() {
       submitBtn.textContent = 'Подтвердить';
     }
   });
+
+  if(resendBtn){
+    resendBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const emailInput = document.getElementById('verify-email');
+      if(!emailInput) return alert('Email not found in form');
+      const email = emailInput.value.trim();
+      if(!email) return alert('Введите email');
+      try{
+        const res = await apiFetch('/auth/resend', { method: 'POST', body: { email } });
+        const data = await res.json();
+        if(!res.ok) return alert('Ошибка: ' + (data.error || 'Не удалось отправить код'));
+        if(data.code) alert('Код подтверждения (debug): ' + data.code);
+        alert('Код подтверждения отправлен повторно');
+      }catch(err){ console.error('Resend error', err); alert('Ошибка при отправке кода'); }
+    });
+  }
+      
+      if (!res.ok) {
+        alert('Ошибка: ' + (data.error || 'Неверный код'));
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Подтвердить';
+        return;
+      }
+      
+      // Success
+      hideVerifyModal();
+      alert('Аккаунт подтверждён!');
+      showAuthModal('login');
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Подтвердить';
+    } catch (err) {
+      console.error('Verification error:', err);
+      alert('Ошибка подтверждения: ' + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Подтвердить';
+    }
+  });
 }
 
 // Handle login
@@ -636,8 +690,10 @@ function initLogin() {
   const submitBtn = document.getElementById('login-submit');
   if (!submitBtn) return;
   console.log('initLogin: submit button found');
+  let inProgress = false;
   
   submitBtn.addEventListener('click', async (e) => {
+    if(inProgress) return; inProgress = true;
     console.log('initLogin: submit clicked');
     e.preventDefault();
     
@@ -702,6 +758,7 @@ function initLogin() {
       alert('Ошибка входа: ' + err.message);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Войти';
+      inProgress = false;
     }
   });
 }
@@ -754,7 +811,7 @@ function renderProducts(products){
     card.dataset.id = p.id;
     card.innerHTML = `
       <div class="card-surface">
-        <div class="image"><img src="${p.image}" alt="${p.title}"/></div>
+        <div class="image"></div>
         <div class="footer">
           <div class="price">${p.price}</div>
           <div class="title">${p.title}</div>
@@ -762,6 +819,19 @@ function renderProducts(products){
         </div>
       </div>
     `;
+    // create image element safely (avoid direct innerHTML src insertion)
+    const imgWrap = card.querySelector('.image');
+    const imgEl = document.createElement('img');
+    imgEl.alt = p.title || '';
+    // sanitize image src on client-side as an extra layer
+    const src = (p.image || '').trim();
+    if(!src || src === 'po' || src === '/po' || src.endsWith('/po')){
+      imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+      imgEl.dataset.blocked = src;
+    } else {
+      imgEl.src = src;
+    }
+    imgWrap.appendChild(imgEl);
     // add favorite button overlay
     const favBtn = document.createElement('button');
     favBtn.className = 'fav-btn';

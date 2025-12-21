@@ -247,7 +247,10 @@
       <form id="form-verify" class="auth-form" onsubmit="return false">
         <input id="verify-email" type="email" placeholder="Email" style="margin-bottom:8px" />
         <input id="verify-code" type="text" placeholder="Код из письма" />
-        <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
+          <button id="verify-resend" class="secondary-cta" type="button">Отправить код ещё раз</button>
+        </div>
       </form>
     </div>
   </div>
