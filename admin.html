@@ -1,402 +1,223 @@
-// admin.js — Admin panel UI + local fallback + API-sync helpers
-(function(){
-  const PRODUCTS_KEY = 'admin_products_v1';
-  const CATS_KEY = 'admin_cats_v1';
-  const THREAD_KEY = 'ismart_threads_v1'; // shared with frontend chat
-  const USERS_KEY = 'ismart_users_v1';
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>iSmartShop — Admin</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Backend API base (deployed on Render)
+    window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
+  </script>
+  <style>
+    /* Admin page styles — responsive and matching site theme */
+    :root{--sidebar-w:240px;--gap:14px}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:var(--bg-gradient);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;align-items:flex-start;justify-content:center;padding:18px}
+    .admin-app{width:100%;max-width:1100px;display:flex;gap:var(--gap);min-height:calc(100vh - 36px)}
 
-  // API base and helper (credentials included)
-  const API_BASE = window.ISMART_API_BASE || '';
-  async function apiFetch(path, opts = {}){
-    const url = (path.startsWith('http') || path.startsWith('/')) ? API_BASE + path : API_BASE + '/' + path;
-    const init = { credentials: 'include', headers: {}, ...opts };
-    if(init.body && typeof init.body === 'object' && !(init.body instanceof FormData)){
-      init.headers['Content-Type'] = 'application/json';
-      init.body = JSON.stringify(init.body);
+    /* Sidebar */
+    .admin-sidebar{width:var(--sidebar-w);min-width:180px;background:var(--card-white);border-radius:14px;padding:18px;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(0,0,0,0.06)}
+    .admin-logo{font-weight:800;font-size:18px;margin-bottom:12px}
+    .admin-sidebar nav{display:flex;flex-direction:column;gap:8px}
+    .nav-btn{background:transparent;border:0;padding:12px 10px;border-radius:10px;text-align:left;font-weight:700;cursor:pointer;color:var(--text)}
+    .nav-btn.active{background:var(--pill-bg);box-shadow:0 8px 18px var(--surface-shadow)}
+    #admin-logout{width:100%;border:0;padding:10px;border-radius:10px;background:linear-gradient(180deg,#f6f6f8,#efeff2);cursor:pointer}
+
+    /* Main area */
+    .admin-main{flex:1;display:flex;flex-direction:column;gap:12px}
+    .admin-header{display:flex;align-items:center;justify-content:space-between;padding:6px 8px}
+    .admin-actions button, #btn-refresh, #btn-new-product, #btn-new-category{border:0;padding:10px 14px;border-radius:10px;background:var(--control-bg);cursor:pointer}
+
+    /* Dashboard cards */
+    .cards{display:flex;gap:12px;flex-wrap:wrap}
+    .card{flex:1;min-width:160px;background:var(--card-white);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
+    .card-title{color:var(--muted);font-weight:700}
+    .card-value{font-size:22px;font-weight:800;margin-top:8px}
+
+    /* Admin panels layout */
+    .admin-panel-row{display:flex;gap:12px}
+    .panel-left{flex:1;min-width:260px}
+    .panel-right{flex:1.2;background:var(--card-white);padding:12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.04)}
+
+    /* Products/Categories lists */
+    #products-list, #categories-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .item-row{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:var(--pill-bg)}
+    .item-row .meta{display:flex;gap:8px;align-items:center}
+    .item-actions button{margin-left:8px}
+
+    /* Chat layout */
+    .chat-wrap{display:flex;gap:12px}
+    .chat-threads{width:260px;background:var(--card-white);padding:10px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.04);overflow:auto}
+    .chat-window{flex:1;display:flex;flex-direction:column;background:var(--card-white);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,0.04)}
+    .chat-messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:10px}
+    .chat-composer{display:flex;gap:8px;padding-top:8px}
+    .chat-composer input{flex:1;padding:12px;border-radius:10px;border:0;background:var(--frost)}
+    .chat-composer button{padding:10px 14px;border-radius:10px;border:0;background:var(--control-bg)}
+
+    /* Modal */
+    .admin-login-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:400}
+    .admin-login-card{background:var(--card-white);Padding:18px;border-radius:12px;min-width:300px;max-width:92%;box-shadow:0 18px 40px rgba(0,0,0,0.12)}
+    .admin-login-card input{width:100%;padding:10px;border-radius:8px;border:0;background:var(--frost);margin-bottom:8px}
+    .admin-login-card button{padding:10px 14px;border-radius:8px;border:0;background:var(--control-bg)}
+
+    .form-row{margin-bottom:8px}
+    .admin-footer{display:flex;align-items:center;justify-content:center}
+
+    /* utility */
+    .hidden{display:none !important}
+
+    @media (max-width:840px){
+      .admin-app{flex-direction:column;padding:8px}
+      .admin-sidebar{width:100%;min-width:unset;order:2;display:flex;flex-direction:row;gap:8px;align-items:center;padding:10px;border-radius:12px}
+      .admin-sidebar nav{flex:1;display:flex;gap:6px;overflow:auto}
+      .nav-btn{flex:1;padding:10px;font-size:13px}
+      .admin-main{order:1}
+      .admin-panel-row{flex-direction:column}
+      .chat-threads{width:100%;order:2}
+      .chat-window{order:1}
     }
-    return fetch(url, init);
-  }
+  </style>
+</head>
+<body>
+  <!-- Cookie access banner / check for admin -->
+  <div id="admin-cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1">Для входа в админ-панель требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — разрешите cookies в настройках браузера и используйте HTTPS.</div>
+      <div style="display:flex;gap:8px"><button id="admin-cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="admin-cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
+    </div>
+  </div>
 
-  // try API helper: returns JSON or null on failure
-  async function tryApi(method, path, body){
-    try{
-      const res = await apiFetch(path, { method, body });
-      if(!res.ok) return null;
-      const ct = res.headers.get('content-type') || '';
-      if(ct.indexOf('application/json') !== -1) return await res.json();
-      return true;
-    }catch(e){ return null; }
-  }
+  <div class="admin-app">
+    <div id="admin-login-modal" class="admin-login-modal hidden">
+      <div class="admin-login-card">
+        <h3>Вход в админку</h3>
+        <div class="form-row"><input id="admin-login-username" placeholder="Логин"/></div>
+        <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль"/></div>
+        <div class="form-row" style="text-align:right"><button id="admin-login-submit" disabled>Войти</button></div>
+      </div>
+    </div>
+    <aside class="admin-sidebar">
+      <div class="admin-logo">iSmartShop — Admin</div>
+      <nav>
+        <button class="nav-btn" data-view="dashboard">Панель</button>
+        <button class="nav-btn" data-view="products">Товары</button>
+        <button class="nav-btn" data-view="categories">Категории</button>
+        <button class="nav-btn" data-view="chats">Чаты</button>
+        <button class="nav-btn" data-view="database">База данных</button>
+      </nav>
+      <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout">Выйти</button></div>
+    </aside>
 
-  // load products from API or localStorage fallback
-  async function loadProducts(){
-    const api = await tryApi('GET','/api/products');
-    if(api) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(api));
-      return api;
-    }
-    const s = localStorage.getItem(PRODUCTS_KEY);
-    if(s) return JSON.parse(s);
-    // no data available
-    return [];
-  }
+    <main class="admin-main">
+      <header class="admin-header">
+        <div id="admin-status">Статус: <span id="admin-status-text">offline</span></div>
+        <div class="admin-actions"><button id="btn-refresh">Обновить</button></div>
+      </header>
 
-  async function saveProductsLocally(products){
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
-    // local saved; admin edits will try to save to API when possible (see form submit)
-  }
+      <section id="view-dashboard" class="admin-view">
+        <h2>Панель</h2>
+        <div class="cards">
+          <div class="card"><div class="card-title">Пользователей</div><div class="card-value" id="stat-users">—</div></div>
+          <div class="card"><div class="card-title">Товаров</div><div class="card-value" id="stat-products">—</div></div>
+          <div class="card"><div class="card-title">Чатов</div><div class="card-value" id="stat-threads">—</div></div>
+        </div>
+      </section>
 
-  async function loadCategories(){
-    const api = await tryApi('GET','/api/categories');
-    if(api){ localStorage.setItem(CATS_KEY, JSON.stringify(api)); return api; }
-    const s = localStorage.getItem(CATS_KEY); if(s) return JSON.parse(s);
-    return [];
-  }
+      <section id="view-products" class="admin-view hidden">
+        <h2>Товары</h2>
+        <div class="admin-panel-row">
+          <div class="panel-left">
+            <button id="btn-new-product">Добавить товар</button>
+            <div id="products-list"></div>
+          </div>
+          <div class="panel-right">
+            <div id="product-form-wrap"></div>
+          </div>
+        </div>
+      </section>
 
-  function saveCategoriesLocally(cats){ localStorage.setItem(CATS_KEY, JSON.stringify(cats)); }
+      <section id="view-categories" class="admin-view hidden">
+        <h2>Категории</h2>
+        <div class="admin-panel-row">
+          <div class="panel-left">
+            <button id="btn-new-category">Добавить категорию</button>
+            <div id="categories-list"></div>
+          </div>
+          <div class="panel-right">
+            <div id="category-form-wrap"></div>
+          </div>
+        </div>
+      </section>
 
-  async function loadThreads(){
-    const api = await tryApi('GET','/api/admin/threads');
-    if(api) return api;
-    try{ return JSON.parse(localStorage.getItem(THREAD_KEY) || '{}'); }catch(e){ return {}; }
-  }
-  function saveThreads(t){ localStorage.setItem(THREAD_KEY, JSON.stringify(t)); }
+      <section id="view-chats" class="admin-view hidden">
+        <h2>Чаты</h2>
+        <div class="chat-wrap">
+          <div class="chat-threads" id="chat-threads"></div>
+          <div class="chat-window" id="chat-window">
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-composer"><input id="chat-input" placeholder="Введите сообщение..."/><button id="chat-send">Отправить</button></div>
+          </div>
+        </div>
+      </section>
 
-  async function loadUsers(){
-    // prefer admin stats endpoint; but keep local fallback
-    const stats = await tryApi('GET','/api/admin/stats');
-    if(stats && typeof stats.users === 'number'){
-      // return array-like placeholder using count
-      return Array.from({length: stats.users}).map((_,i)=>({ id: i+1 }));
-    }
-    try{ return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }catch(e){ return []; }
-  }
+      <section id="view-database" class="admin-view hidden">
+        <h2>База данных / Хранилище</h2>
+        <div class="admin-panel-row">
+          <div class="panel-left">
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-title">Информация</div>
+              <div style="margin-top:8px">DB: <span id="db-info-db">—</span></div>
+              <div>Users: <span id="db-info-users">—</span></div>
+              <div>DB Size: <span id="db-info-size">—</span></div>
+            </div>
 
-  // UI helpers
-  function $(sel){ return document.querySelector(sel); }
-  function $all(sel){ return Array.from(document.querySelectorAll(sel)); }
+            <div class="card">
+              <div class="card-title">Пользователи</div>
+              <div style="margin-top:8px"><button id="db-refresh-users">Обновить список</button> <button id="db-truncate-users">Очистить всех</button></div>
+              <div id="db-users-list" style="margin-top:12px;max-height:360px;overflow:auto"></div>
+            </div>
+          </div>
 
-  // Rendering
-  async function renderDashboard(){
-    const users = loadUsers();
-    const products = await loadProducts();
-    const threads = loadThreads();
-    $('#stat-users').textContent = users.length;
-    $('#stat-products').textContent = products.length;
-    $('#stat-threads').textContent = Object.keys(threads).length;
-  }
+          <div class="panel-right">
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-title">Операции</div>
+              <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json">Сделать бэкап JSON</button><button id="db-vacuum">VACUUM</button></div>
+            </div>
 
-  // --- Auth helpers ---
-  let currentUser = null;
-  async function fetchMe(){
-    const me = await tryApi('GET','/auth/me');
-    currentUser = me;
-    return me;
-  }
+            <div class="card">
+              <div class="card-title">Выполнить SQL (Postgres)</div>
+              <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px"></textarea>
+              <div style="text-align:right;margin-top:8px"><button id="db-exec-sql">Выполнить</button></div>
+              <pre id="db-sql-result" style="margin-top:8px;max-height:240px;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;display:none"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
-  async function doLogin(email, pass){
-    const res = await tryApi('POST','/auth/login', { email, password: pass });
-    if(!res) return null;
-    // after login, fetch profile
-    return await fetchMe();
-  }
-
-  // admin login using ADMIN_USER/ADMIN_PASS via /auth/admin-login
-  async function doAdminLogin(username, pass){
-    try{
-      const resp = await apiFetch('/auth/admin-login', { method: 'POST', body: { username, password: pass } });
-      console.log('doAdminLogin: admin-login response status=', resp.status);
-      const ct = resp.headers.get('content-type') || '';
-      let body = null;
-      if(ct.indexOf('application/json') !== -1) {
-        body = await resp.json();
-        console.log('doAdminLogin: admin-login body=', body);
-      }
-      if(!resp.ok){
-        return { error: body || (`status ${resp.status}`) };
-      }
-      // on success, try to fetch current user (cookie should be set)
-      let me = await tryApi('GET','/auth/me');
-      // If cookie-based fetch returned null (sometimes cookies aren't set immediately),
-      // retry using the returned token with an Authorization: Bearer header
-      if((me === null || me === undefined) && body && body.token){
+  <script src="admin.js"></script>
+  <script>
+    (function(){
+      const banner = document.getElementById('admin-cookie-banner');
+      const btn = document.getElementById('admin-cookie-test-btn');
+      const dismiss = document.getElementById('admin-cookie-dismiss');
+      const loginBtn = document.getElementById('admin-login-submit');
+      function testCookies(){
         try{
-          const r2 = await apiFetch('/auth/me', { method: 'GET', headers: { Authorization: 'Bearer ' + body.token } });
-          if(r2 && r2.ok){
-            const ct2 = r2.headers.get('content-type') || '';
-            if(ct2.indexOf('application/json') !== -1) me = await r2.json();
-            else me = true;
-          }
-        }catch(err){ console.warn('doAdminLogin: bearer retry failed', err); }
+          document.cookie = 'ismart_test=1; path=/';
+          const ok = document.cookie.indexOf('ismart_test=1') !== -1;
+          if(ok){ document.cookie = 'ismart_test=; Max-Age=0; path=/'; window.ISMART_COOKIES_OK = true; banner.style.display='none'; if(loginBtn) loginBtn.disabled = false; }
+          else { window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; }
+          return ok;
+        }catch(e){ window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; return false; }
       }
-      console.log('doAdminLogin: /auth/me ->', me);
-      return me;
-    }catch(e){
-      console.error('admin-login error', e);
-      return { error: e.message };
-    }
-  }
-
-  async function doLogout(){
-    await tryApi('POST','/auth/logout');
-    currentUser = null;
-    // reload UI
-    $('#admin-status-text').textContent = 'offline';
-    // show login modal
-    showLoginModal(true);
-  }
-
-  function showLoginModal(show){
-    const m = document.getElementById('admin-login-modal');
-    if(!m) return;
-    m.classList.toggle('hidden', !show);
-  }
-
-  async function initAfterAuth(){
-    // default view after successful auth
-    showView('dashboard');
-    await renderDashboard();
-    await renderProducts();
-    await renderCategories();
-    renderThreads();
-    const h = await tryApi('GET','/api/health'); $('#admin-status-text').textContent = h? 'online' : 'offline';
-  }
-
-  async function renderProducts(){
-    const list = $('#products-list'); list.innerHTML = '';
-    const products = await loadProducts();
-    products.forEach(p=>{
-      const el = document.createElement('div'); el.className = 'admin-item';
-      el.innerHTML = `<strong>${p.title}</strong><div>${p.price} — ${p.category}</div><div class="admin-item-actions"><button data-id="${p.id}" class="edit-product">Edit</button><button data-id="${p.id}" class="del-product">Delete</button></div>`;
-      list.appendChild(el);
-    });
-    $all('.edit-product').forEach(b=> b.addEventListener('click', e=> openProductForm(e.target.dataset.id)));
-    $all('.del-product').forEach(b=> b.addEventListener('click', async e=>{
-      const id = e.target.dataset.id; if(!confirm('Удалить товар?')) return;
-      const apiRes = await tryApi('DELETE', `/api/products/${id}`);
-      const products = await loadProducts();
-      const idx = products.findIndex(x=>x.id===id);
-      if(apiRes){
-        // refreshed during loadProducts if API available
-      } else if(idx>=0){
-        products.splice(idx,1); await saveProductsLocally(products);
-      }
-      renderProducts(); renderDashboard();
-    }));
-  }
-
-  async function openProductForm(id){
-    const wrap = $('#product-form-wrap'); wrap.innerHTML = '';
-    const products = await loadProducts();
-    const product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', image:'', category:'', description:'', colors:[] };
-    const cats = await loadCategories();
-    const form = document.createElement('form');
-    form.innerHTML = `
-      <label>Название<br><input name="title" value="${escapeHtml(product.title)}"></label>
-      <label>Цена<br><input name="price" value="${escapeHtml(product.price)}"></label>
-      <label>Категория<br><select name="category">${cats.map(c=>`<option value="${c.id}" ${c.id===product.category? 'selected':''}>${c.name}</option>`).join('')}</select></label>
-      <label>Изображение (путь)<br><input name="image" value="${escapeHtml(product.image)}"></label>
-      <label>Описание<br><textarea name="description">${escapeHtml(product.description)}</textarea></label>
-      <div style="margin-top:8px"><button type="submit">Сохранить</button> <button type="button" id="cancel-product">Отмена</button></div>
-    `;
-    wrap.appendChild(form);
-    $('#cancel-product').addEventListener('click', ()=>{ wrap.innerHTML=''; });
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(form); const updated = { id: product.id, title: fd.get('title'), price: fd.get('price'), image: fd.get('image'), category: fd.get('category'), description: fd.get('description'), colors: [] };
-      // try to save to API (POST for new, PUT for existing). Fallback to localStorage on failure.
-      const existing = (await loadProducts()).some(p=>p.id === product.id);
-      let ok = null;
-      if(existing){
-        ok = await tryApi('PUT', `/api/products/${product.id}`, updated);
-      } else {
-        ok = await tryApi('POST', '/api/products', updated);
-      }
-      let products = await loadProducts();
-      if(!ok){
-        const idx = products.findIndex(x=>x.id===product.id);
-        if(idx>=0) products[idx] = updated; else products.push(updated);
-        await saveProductsLocally(products);
-      }
-      renderProducts(); renderDashboard(); wrap.innerHTML='';
-    });
-  }
-
-  async function renderCategories(){
-    const list = $('#categories-list'); list.innerHTML = '';
-    const cats = await loadCategories();
-    cats.forEach(c=>{
-      const el = document.createElement('div'); el.className='admin-item'; el.innerHTML = `<strong>${c.name}</strong><div class="admin-item-actions"><button data-id="${c.id}" class="edit-cat">Edit</button><button data-id="${c.id}" class="del-cat">Delete</button></div>`; list.appendChild(el);
-    });
-    $all('.edit-cat').forEach(b=> b.addEventListener('click', e=> openCategoryForm(e.target.dataset.id)));
-    $all('.del-cat').forEach(b=> b.addEventListener('click', async e=>{
-      if(!confirm('Удалить категорию?')) return;
-      const id = e.target.dataset.id;
-      const apiRes = await tryApi('DELETE', `/api/categories/${id}`);
-      if(!apiRes){
-        const cats = await loadCategories(); const idx = cats.findIndex(x=>x.id===id); if(idx>=0){ cats.splice(idx,1); saveCategoriesLocally(cats); }
-      }
-      renderCategories();
-    }));
-  }
-
-  // --------- Admin DB UI helpers ---------
-  async function loadAdminDBInfo(){
-    const info = await tryApi('GET','/admin/db/info');
-    if(!info) return;
-    $('#db-info-db').textContent = info.db ? 'Postgres' : 'JSON files';
-    $('#db-info-users').textContent = info.userCount || '—';
-    $('#db-info-size').textContent = info.dbSize || (info.userFileSize ? (info.userFileSize + ' bytes') : '—');
-  }
-
-  async function loadAdminUsers(){
-    $('#db-users-list').innerHTML = '<div class="muted">Загрузка...</div>';
-    const users = await tryApi('GET','/admin/db/users?limit=500');
-    if(!users) { $('#db-users-list').innerHTML = '<div class="muted">Не удалось получить список пользователей</div>'; return; }
-    const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap='8px';
-    users.forEach(u=>{
-      const r = document.createElement('div'); r.className='item-row'; r.innerHTML = `<div class="meta">${u.email || ''} <span class="muted" style="margin-left:8px">${u.name || ''}</span></div><div class="item-actions"><button data-email="${u.email}" class="db-del-user">Удалить</button></div>`;
-      wrap.appendChild(r);
-    });
-    $('#db-users-list').innerHTML=''; $('#db-users-list').appendChild(wrap);
-    $all('.db-del-user').forEach(b=> b.addEventListener('click', async e=>{
-      const email = e.target.dataset.email; if(!confirm('Удалить пользователя ' + email + '? Это действие необратимо.')) return;
-      const res = await tryApi('POST','/admin/db/delete-user', { email });
-      if(!res) return alert('Удаление не удалось.');
-      alert('Пользователь удалён: ' + (res.deleted && res.deleted.email)); loadAdminUsers(); loadAdminDBInfo(); renderDashboard();
-    }));
-  }
-
-  async function doDbTruncate(){
-    if(!confirm('Вы уверены? Все пользователи будут удалены. Эта операция необратима.')) return;
-    const res = await tryApi('POST','/admin/db/truncate-users', { confirm: true });
-    if(!res) return alert('Операция не удалась');
-    alert('Таблица пользователей очищена'); loadAdminUsers(); loadAdminDBInfo(); renderDashboard();
-  }
-
-  async function doDbBackup(){
-    const res = await tryApi('POST','/admin/db/backup-json');
-    if(!res) return alert('Бэкап не выполнен');
-    alert('Бэкап создан: ' + (res.copies ? res.copies.length + ' файлов' : 'ок'));
-  }
-
-  async function doDbVacuum(){
-    const res = await tryApi('POST','/admin/db/vacuum', { full: false });
-    if(!res) return alert('VACUUM не выполнен');
-    alert('VACUUM выполнен');
-  }
-
-  async function doDbExecSql(){
-    const sql = document.getElementById('db-sql').value || '';
-    if(!sql.trim()) return alert('SQL-запрос пуст');
-    const resultEl = document.getElementById('db-sql-result'); resultEl.style.display='block'; resultEl.textContent = 'Выполняется...';
-    const res = await tryApi('POST','/admin/db/execute', { sql });
-    if(!res){ resultEl.textContent = 'Выполнение не удалось'; return; }
-    resultEl.textContent = JSON.stringify(res, null, 2);
-  }
-
-
-
-  async function openCategoryForm(id){
-    const wrap = $('#category-form-wrap'); wrap.innerHTML='';
-    const cats = await loadCategories();
-    const cat = id ? cats.find(c=>c.id===id) : { id: Date.now().toString(), name:'' };
-    const form = document.createElement('form');
-    form.innerHTML = `<label>Название<br><input name="name" value="${escapeHtml(cat.name)}"></label><div style="margin-top:8px"><button type="submit">Сохранить</button> <button type="button" id="cancel-cat">Отмена</button></div>`;
-    wrap.appendChild(form);
-    $('#cancel-cat').addEventListener('click', ()=> wrap.innerHTML='');
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault(); const fd = new FormData(form); const name = fd.get('name');
-      // try API create/update
-      if(cat && cat.id){
-        const res = await tryApi('PUT', `/api/categories/${cat.id}`, { name });
-        if(res){ await loadCategories(); renderCategories(); wrap.innerHTML=''; return; }
-      }
-      const apiRes = await tryApi('POST', '/api/categories', { name });
-      if(apiRes){ await loadCategories(); renderCategories(); wrap.innerHTML=''; return; }
-      const cats2 = await loadCategories(); const idx = cats2.findIndex(x=>x.id===cat.id); if(idx>=0) cats2[idx].name = name; else cats2.push({ id: Date.now().toString(), name }); saveCategoriesLocally(cats2); renderCategories(); wrap.innerHTML='';
-    });
-  }
-
-  // Chat rendering
-  function renderThreads(){
-    const threads = loadThreads(); const container = $('#chat-threads'); container.innerHTML='';
-    const ids = Object.keys(threads).reverse();
-    if(ids.length===0){ container.innerHTML = '<p>Пока нет чатов.</p>'; $('#chat-messages').innerHTML=''; return; }
-    ids.forEach(id=>{
-      const thread = threads[id]; const last = thread[thread.length-1];
-      const el = document.createElement('div'); el.className='thread-item'; el.innerHTML = `<strong>${thread.title || ('Товар ' + id)}</strong><div class="muted">${last? last.text.slice(0,80): ''}</div>`;
-      el.addEventListener('click', ()=> openThread(id)); container.appendChild(el);
-    });
-  }
-
-  function openThread(id){
-    const threads = loadThreads(); const thread = threads[id] || [];
-    const messagesEl = $('#chat-messages'); messagesEl.innerHTML = '';
-    thread.forEach(m=>{
-      const d = document.createElement('div'); d.className = 'msg ' + (m.from==='user' ? 'user' : 'admin'); d.textContent = (m.from==='user' ? 'Пользователь: ' : 'Админ: ') + m.text; messagesEl.appendChild(d);
-    });
-    // attach send handler
-    $('#chat-send').onclick = ()=>{
-      const input = $('#chat-input'); const text = input.value.trim(); if(!text) return; const msg = { from:'admin', text, at: Date.now() };
-      thread.push(msg); threads[id] = thread; saveThreads(threads); openThread(id); renderThreads(); input.value='';
-    };
-  }
-
-  // Utils
-  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-  // Navigation
-  function showView(name){
-    $all('.admin-view').forEach(v=> v.classList.add('hidden'));
-    const el = document.getElementById('view-'+name); if(el) el.classList.remove('hidden');
-    $all('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
-  }
-
-
-  // Init
-  async function init(){
-    // wire nav
-    $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='chats') renderThreads(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
-    $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); renderThreads(); loadAdminDBInfo(); loadAdminUsers(); });
-    $('#btn-new-product').addEventListener('click', ()=> openProductForm());
-    $('#btn-new-category').addEventListener('click', ()=> openCategoryForm());
-    $('#admin-logout')?.addEventListener('click', ()=> doLogout());
-
-    // DB action bindings
-    $('#db-refresh-users')?.addEventListener('click', ()=> loadAdminUsers());
-    $('#db-truncate-users')?.addEventListener('click', ()=> doDbTruncate());
-    $('#db-backup-json')?.addEventListener('click', ()=> doDbBackup());
-    $('#db-vacuum')?.addEventListener('click', ()=> doDbVacuum());
-    $('#db-exec-sql')?.addEventListener('click', ()=> doDbExecSql());
-    // login modal submit
-    const loginBtn = document.getElementById('admin-login-submit');
-    if(loginBtn){
-      loginBtn.addEventListener('click', async ()=>{
-        const usernameEl = document.getElementById('admin-login-username');
-        const userVal = usernameEl ? usernameEl.value.trim() : '';
-        const pass = document.getElementById('admin-login-pass').value;
-        // Only attempt admin-login using ADMIN_USER / ADMIN_PASS (no email fallback)
-        const me = await doAdminLogin(userVal, pass);
-        if(me && me.role === 'admin'){
-          showLoginModal(false);
-          await initAfterAuth();
-        } else if(me && me.error){
-          const msg = (typeof me.error === 'string') ? me.error : (me.error.message || JSON.stringify(me.error));
-          alert('Login failed: ' + msg);
-        } else {
-          alert('Login failed or not admin');
-        }
-      });
-    }
-
-    // try to fetch current user; if not admin, show login modal
-    const me = await fetchMe();
-    if(!me || me.role !== 'admin'){ showLoginModal(true); $('#admin-status-text').textContent = 'offline'; return; }
-    // if admin, continue init
-    await initAfterAuth();
-  }
-
-  // run
-  document.addEventListener('DOMContentLoaded', init);
-})();
+      btn?.addEventListener('click', ()=>{ const ok = testCookies(); if(ok) alert('Cookies доступны.'); else alert('Cookies недоступны. Проверьте настройки браузера и HTTPS.'); });
+      dismiss?.addEventListener('click', ()=> banner.style.display='none');
+      // run test after small delay to allow admin.js to attach handlers
+      setTimeout(testCookies, 100);
+    })();
+  </script>
+</body>
+</html>
