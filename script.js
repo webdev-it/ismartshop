@@ -660,29 +660,6 @@ function initVerification() {
         alert('Код подтверждения отправлен повторно');
       }catch(err){ console.error('Resend error', err); alert('Ошибка при отправке кода'); }
     });
-  }
-      
-      if (!res.ok) {
-        alert('Ошибка: ' + (data.error || 'Неверный код'));
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Подтвердить';
-        return;
-      }
-      
-      // Success
-      hideVerifyModal();
-      alert('Аккаунт подтверждён!');
-      showAuthModal('login');
-      
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Подтвердить';
-    } catch (err) {
-      console.error('Verification error:', err);
-      alert('Ошибка подтверждения: ' + err.message);
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Подтвердить';
-    }
-  });
 }
 
 // Handle login
