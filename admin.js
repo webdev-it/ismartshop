@@ -228,6 +228,63 @@
     }));
   }
 
+  // --------- Admin DB UI helpers ---------
+  async function loadAdminDBInfo(){
+    const info = await tryApi('GET','/admin/db/info');
+    if(!info) return;
+    $('#db-info-db').textContent = info.db ? 'Postgres' : 'JSON files';
+    $('#db-info-users').textContent = info.userCount || '—';
+    $('#db-info-size').textContent = info.dbSize || (info.userFileSize ? (info.userFileSize + ' bytes') : '—');
+  }
+
+  async function loadAdminUsers(){
+    $('#db-users-list').innerHTML = '<div class="muted">Загрузка...</div>';
+    const users = await tryApi('GET','/admin/db/users?limit=500');
+    if(!users) { $('#db-users-list').innerHTML = '<div class="muted">Не удалось получить список пользователей</div>'; return; }
+    const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap='8px';
+    users.forEach(u=>{
+      const r = document.createElement('div'); r.className='item-row'; r.innerHTML = `<div class="meta">${u.email || ''} <span class="muted" style="margin-left:8px">${u.name || ''}</span></div><div class="item-actions"><button data-email="${u.email}" class="db-del-user">Удалить</button></div>`;
+      wrap.appendChild(r);
+    });
+    $('#db-users-list').innerHTML=''; $('#db-users-list').appendChild(wrap);
+    $all('.db-del-user').forEach(b=> b.addEventListener('click', async e=>{
+      const email = e.target.dataset.email; if(!confirm('Удалить пользователя ' + email + '? Это действие необратимо.')) return;
+      const res = await tryApi('POST','/admin/db/delete-user', { email });
+      if(!res) return alert('Удаление не удалось.');
+      alert('Пользователь удалён: ' + (res.deleted && res.deleted.email)); loadAdminUsers(); loadAdminDBInfo(); renderDashboard();
+    }));
+  }
+
+  async function doDbTruncate(){
+    if(!confirm('Вы уверены? Все пользователи будут удалены. Эта операция необратима.')) return;
+    const res = await tryApi('POST','/admin/db/truncate-users', { confirm: true });
+    if(!res) return alert('Операция не удалась');
+    alert('Таблица пользователей очищена'); loadAdminUsers(); loadAdminDBInfo(); renderDashboard();
+  }
+
+  async function doDbBackup(){
+    const res = await tryApi('POST','/admin/db/backup-json');
+    if(!res) return alert('Бэкап не выполнен');
+    alert('Бэкап создан: ' + (res.copies ? res.copies.length + ' файлов' : 'ок'));
+  }
+
+  async function doDbVacuum(){
+    const res = await tryApi('POST','/admin/db/vacuum', { full: false });
+    if(!res) return alert('VACUUM не выполнен');
+    alert('VACUUM выполнен');
+  }
+
+  async function doDbExecSql(){
+    const sql = document.getElementById('db-sql').value || '';
+    if(!sql.trim()) return alert('SQL-запрос пуст');
+    const resultEl = document.getElementById('db-sql-result'); resultEl.style.display='block'; resultEl.textContent = 'Выполняется...';
+    const res = await tryApi('POST','/admin/db/execute', { sql });
+    if(!res){ resultEl.textContent = 'Выполнение не удалось'; return; }
+    resultEl.textContent = JSON.stringify(res, null, 2);
+  }
+
+
+
   async function openCategoryForm(id){
     const wrap = $('#category-form-wrap'); wrap.innerHTML='';
     const cats = await loadCategories();
@@ -288,11 +345,18 @@
   // Init
   async function init(){
     // wire nav
-    $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='chats') renderThreads(); }));
-    $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); renderThreads(); });
+    $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='chats') renderThreads(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
+    $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); renderThreads(); loadAdminDBInfo(); loadAdminUsers(); });
     $('#btn-new-product').addEventListener('click', ()=> openProductForm());
     $('#btn-new-category').addEventListener('click', ()=> openCategoryForm());
     $('#admin-logout')?.addEventListener('click', ()=> doLogout());
+
+    // DB action bindings
+    $('#db-refresh-users')?.addEventListener('click', ()=> loadAdminUsers());
+    $('#db-truncate-users')?.addEventListener('click', ()=> doDbTruncate());
+    $('#db-backup-json')?.addEventListener('click', ()=> doDbBackup());
+    $('#db-vacuum')?.addEventListener('click', ()=> doDbVacuum());
+    $('#db-exec-sql')?.addEventListener('click', ()=> doDbExecSql());
     // login modal submit
     const loginBtn = document.getElementById('admin-login-submit');
     if(loginBtn){

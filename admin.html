@@ -104,6 +104,7 @@
         <button class="nav-btn" data-view="products">Товары</button>
         <button class="nav-btn" data-view="categories">Категории</button>
         <button class="nav-btn" data-view="chats">Чаты</button>
+        <button class="nav-btn" data-view="database">База данных</button>
       </nav>
       <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout">Выйти</button></div>
     </aside>
@@ -156,6 +157,40 @@
           <div class="chat-window" id="chat-window">
             <div id="chat-messages" class="chat-messages"></div>
             <div class="chat-composer"><input id="chat-input" placeholder="Введите сообщение..."/><button id="chat-send">Отправить</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-database" class="admin-view hidden">
+        <h2>База данных / Хранилище</h2>
+        <div class="admin-panel-row">
+          <div class="panel-left">
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-title">Информация</div>
+              <div style="margin-top:8px">DB: <span id="db-info-db">—</span></div>
+              <div>Users: <span id="db-info-users">—</span></div>
+              <div>DB Size: <span id="db-info-size">—</span></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Пользователи</div>
+              <div style="margin-top:8px"><button id="db-refresh-users">Обновить список</button> <button id="db-truncate-users">Очистить всех</button></div>
+              <div id="db-users-list" style="margin-top:12px;max-height:360px;overflow:auto"></div>
+            </div>
+          </div>
+
+          <div class="panel-right">
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-title">Операции</div>
+              <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json">Сделать бэкап JSON</button><button id="db-vacuum">VACUUM</button></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Выполнить SQL (Postgres)</div>
+              <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px"></textarea>
+              <div style="text-align:right;margin-top:8px"><button id="db-exec-sql">Выполнить</button></div>
+              <pre id="db-sql-result" style="margin-top:8px;max-height:240px;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;display:none"></pre>
+            </div>
           </div>
         </div>
       </section>
