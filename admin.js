@@ -116,7 +116,19 @@
         return { error: body || (`status ${resp.status}`) };
       }
       // on success, try to fetch current user (cookie should be set)
-      const me = await tryApi('GET','/auth/me');
+      let me = await tryApi('GET','/auth/me');
+      // If cookie-based fetch returned null (sometimes cookies aren't set immediately),
+      // retry using the returned token with an Authorization: Bearer header
+      if((me === null || me === undefined) && body && body.token){
+        try{
+          const r2 = await apiFetch('/auth/me', { method: 'GET', headers: { Authorization: 'Bearer ' + body.token } });
+          if(r2 && r2.ok){
+            const ct2 = r2.headers.get('content-type') || '';
+            if(ct2.indexOf('application/json') !== -1) me = await r2.json();
+            else me = true;
+          }
+        }catch(err){ console.warn('doAdminLogin: bearer retry failed', err); }
+      }
       console.log('doAdminLogin: /auth/me ->', me);
       return me;
     }catch(e){
