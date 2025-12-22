@@ -747,8 +747,11 @@ function initLogin() {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Войти';
       
-      // Reload page to reflect logged-in state
-      location.reload();
+      // Do not reload page — update client state in-place so auth modal stays closed
+      // (reloading can re-trigger auth checks that depend on cookies/localStorage timing)
+      try{ window.ISMART_LOGGED_IN = true; }catch(e){}
+      // Optionally refresh parts of the UI that depend on auth (best-effort)
+      try{ const currentUser = await checkCurrentUser(); if(currentUser) console.log('User after login:', currentUser.email); }catch(e){}
     } catch (err) {
       console.error('Login error:', err);
       alert('Ошибка входа: ' + err.message);
