@@ -466,6 +466,9 @@ function showVerifyModal(email) {
     const codeInput = document.getElementById('verify-code');
     if(codeInput) setTimeout(()=> codeInput.focus(), 60);
   }
+  // Ensure the verify form is visible (other code may have hidden all .auth-form elements)
+  const verifyForm = document.getElementById('form-verify');
+  if(verifyForm) verifyForm.style.display = 'block';
 }
 
 // Hide verification modal
