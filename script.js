@@ -734,6 +734,9 @@ function initLogin() {
       } catch (e) {
         console.warn('Could not fetch user profile');
       }
+
+      // Ensure a minimal local marker so reload won't show auth modal if /auth/me wasn't available
+      try { saveUser({ email }); } catch(e) { /* ignore */ }
       
       // Success
       hideAuthModal();
@@ -903,13 +906,19 @@ function setupCarousel(){
 async function checkCurrentUser(){
   try {
     const res = await apiFetch('/auth/me');
-    if(!res.ok) return null;
-    const user = await res.json();
-    if(user) saveUser(user);
-    return user;
-  } catch(e) {
-    console.log('Session check:', e.message);
+    if (res.ok) {
+      const user = await res.json();
+      if (user) saveUser(user);
+      return user;
+    }
+    // If server doesn't report a session, fall back to any saved client state
+    const local = loadUser();
+    if (local) return local;
     return null;
+  } catch (e) {
+    // Network or other error — use local storage as fallback so UI doesn't force-login users
+    console.log('Session check (network error):', e.message);
+    try { return loadUser(); } catch(err){ return null; }
   }
 }
 
