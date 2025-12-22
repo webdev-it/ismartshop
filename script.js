@@ -462,6 +462,9 @@ function showVerifyModal(email) {
   const emailInput = document.getElementById('verify-email');
   if (emailInput) {
     emailInput.value = email || '';
+    // focus the code input to make verification visible and convenient
+    const codeInput = document.getElementById('verify-code');
+    if(codeInput) setTimeout(()=> codeInput.focus(), 60);
   }
 }
 
@@ -502,6 +505,7 @@ function initRegistration() {
     const nameInput = document.getElementById('reg-name');
     const emailInput = document.getElementById('reg-email');
     const passInput = document.getElementById('reg-password');
+    const passConfirmInput = document.getElementById('reg-password-repeat');
     
     if (!nameInput || !emailInput || !passInput) {
       alert('Ошибка: элементы формы не найдены');
@@ -511,6 +515,7 @@ function initRegistration() {
     const name = nameInput.value.trim();
     const email = emailInput.value.trim();
     const password = passInput.value;
+    const passwordConfirm = (passConfirmInput && passConfirmInput.value) ? passConfirmInput.value : '';
     
     // Validation
     if (!name) {
@@ -528,6 +533,12 @@ function initRegistration() {
     if (!password || password.length < 6) {
       alert('Пароль должен быть не менее 6 символов');
       passInput.focus();
+      return;
+    }
+
+    if(password !== passwordConfirm){
+      alert('Пароли не совпадают');
+      if(passConfirmInput) passConfirmInput.focus();
       return;
     }
     
@@ -561,6 +572,7 @@ function initRegistration() {
       nameInput.value = '';
       emailInput.value = '';
       passInput.value = '';
+      if(passConfirmInput) passConfirmInput.value = '';
       // If server returned the code (debug mode), show it to the user so they can verify without email
       if (data && data.code) {
         alert('Код подтверждения (debug): ' + data.code);
