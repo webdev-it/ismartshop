@@ -320,21 +320,51 @@
 
   // Chat rendering
   function renderThreads(){
-    const threads = loadThreads(); const container = $('#chat-threads'); container.innerHTML='';
-    const ids = Object.keys(threads).reverse();
-    if(ids.length===0){ container.innerHTML = '<p>Пока нет чатов.</p>'; $('#chat-messages').innerHTML=''; return; }
+    const raw = loadThreads(); const container = $('#chat-threads'); container.innerHTML='';
+    // support both API array response and local object map
+    if(!raw || (Array.isArray(raw) && raw.length === 0) || (typeof raw === 'object' && Object.keys(raw).length === 0)){
+      container.innerHTML = '<p>Пока нет чатов.</p>'; $('#chat-messages').innerHTML=''; return;
+    }
+    if(Array.isArray(raw)){
+      // API returned array of threads
+      raw.slice().reverse().forEach(t => {
+        const last = (t.messages && t.messages.length) ? t.messages[t.messages.length-1] : null;
+        const meta = t.user ? `${t.user.email || ''}${t.user.name ? ' ('+t.user.name+')' : ''}` : '';
+        const el = document.createElement('div'); el.className='thread-item'; el.innerHTML = `<strong>${escapeHtml(t.title || ('Товар ' + t.id))}</strong><div class="muted">${last? escapeHtml(last.text.slice(0,80)): ''}</div><div class="muted small">${escapeHtml(meta)}</div>`;
+        el.addEventListener('click', ()=> openThread(t.id)); container.appendChild(el);
+      });
+      return;
+    }
+    // local object map (fallback)
+    const ids = Object.keys(raw).reverse();
     ids.forEach(id=>{
-      const thread = threads[id]; const last = thread[thread.length-1];
+      const thread = raw[id]; const last = thread[thread.length-1];
       const el = document.createElement('div'); el.className='thread-item'; el.innerHTML = `<strong>${thread.title || ('Товар ' + id)}</strong><div class="muted">${last? last.text.slice(0,80): ''}</div>`;
       el.addEventListener('click', ()=> openThread(id)); container.appendChild(el);
     });
   }
 
   function openThread(id){
-    const threads = loadThreads(); const thread = threads[id] || [];
+    const raw = loadThreads(); let thread = null; let threadMeta = null;
+    if(Array.isArray(raw)){
+      // API shape
+      thread = (raw.find(t=> String(t.id) === String(id)) || {}).messages || [];
+      threadMeta = (raw.find(t=> String(t.id) === String(id)) || {}).user || null;
+    } else {
+      thread = raw[id] || [];
+    }
     const messagesEl = $('#chat-messages'); messagesEl.innerHTML = '';
+    // show header with user email/name when available
+    const header = $('#chat-thread-header'); if(header){ header.textContent = threadMeta ? (threadMeta.email || (threadMeta.name || '')) : (`Чат ${id}`); }
     thread.forEach(m=>{
-      const d = document.createElement('div'); d.className = 'msg ' + (m.from==='user' ? 'user' : 'admin'); d.textContent = (m.from==='user' ? 'Пользователь: ' : 'Админ: ') + m.text; messagesEl.appendChild(d);
+      const d = document.createElement('div'); d.className = 'msg ' + (m.from==='user' ? 'user' : 'admin');
+      if(m.from === 'user'){
+        const who = (m.userEmail || m.userEmail === '') ? (m.userEmail || '') : (m.userName ? m.userName : 'Пользователь');
+        d.textContent = `${who}: ${m.text}`;
+      } else {
+        d.textContent = `Админ: ${m.text}`;
+      }
+      messagesEl.appendChild(d);
     });
     // attach send handler
     $('#chat-send').onclick = ()=>{

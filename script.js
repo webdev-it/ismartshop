@@ -175,31 +175,37 @@ function openChat(productId, prefillMessage){
   sendBtn.onclick = async ()=>{
     const text = input.value.trim(); if(!text) return;
     const user = loadUser();
-    const msg = {from:'user', text, at: Date.now()};
     // Append locally immediately for snappy UI
-    appendMessage(productId, msg);
+    const localMsg = {from:'user', text, at: Date.now()};
+    appendMessage(productId, localMsg);
     const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
     input.value = '';
     messagesEl.scrollTop = messagesEl.scrollHeight;
     const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
 
-    // Send to server when authenticated (best-effort)
-    (async ()=>{
-      try{
-        const me = await checkCurrentUser();
-        if(!me) return; // not logged in — keep local only
-        // If no thread exists on server for this product, create it
-        let threadId = getThreadIdForProduct(productId);
-        if(!threadId){
-          // create thread
-          const resp = await apiFetch('/api/threads', { method: 'POST', body: { productId, text, userId: me.id, userName: me.name || 'Пользователь' } });
-          if(resp && resp.ok){ const j = await resp.json().catch(()=>null); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
-        } else {
-          // post message to existing thread
-          await apiFetch(`/api/threads/${threadId}/messages`, { method: 'POST', body: { text } });
+    try{
+      const me = await checkCurrentUser();
+      if(!me) return; // keep local-only when not logged in
+      // If no thread exists on server for this product, create it and post initial message
+      let threadId = getThreadIdForProduct(productId);
+      if(!threadId){
+        const resp = await apiFetch('/api/threads', { method: 'POST', body: { productId, text, userId: me.id, userName: me.name || 'Пользователь' } });
+        if(resp && resp.ok){ const j = await resp.json().catch(()=>null); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
+      } else {
+        // post message to existing thread
+        await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } });
+      }
+      // Fetch fresh messages for this thread (so admin replies are synced) and update local cache/UI
+      if(threadId){
+        const fresh = await fetchAndStoreThread(threadId, productId);
+        if(fresh && fresh.length){
+          // re-render messages area
+          messagesEl.innerHTML = '';
+          for(const m of fresh){ const elmsg = document.createElement('div'); elmsg.className = 'msg ' + (m.from === 'user' ? 'user' : 'admin'); elmsg.textContent = m.text; messagesEl.appendChild(elmsg); }
+          messagesEl.scrollTop = messagesEl.scrollHeight;
         }
-      }catch(e){ console.log('Server message send failed (local cache still works):', e && e.message); }
-    })();
+      }
+    }catch(e){ console.log('Server message send failed (local cache still works):', e && e.message); }
   };
 }
 
@@ -315,9 +321,23 @@ async function syncFavsFromServer(){
     if(!res || !res.ok) return;
     const rows = await res.json();
     // rows may be array of {product_id} or legacy shapes; normalize
-    const ids = rows.map(r => r.product_id || r.productId || r.productId || r.product_id || r.productId).filter(Boolean);
-    if(ids && ids.length) saveFavs(ids);
+    const ids = rows.map(r => r.product_id || r.productId || (typeof r === 'string' ? r : null)).filter(Boolean);
+    // replace local favorites with server-side favorites (server is source-of-truth for logged-in users)
+    saveFavs(ids);
   }catch(e){ /* ignore */ }
+}
+
+// Migrate any locally-stored favorites into the server-side account (called on login)
+async function migrateLocalFavsToServer(){
+  try{
+    const local = loadFavs(); if(!local || !local.length) return;
+    const me = await checkCurrentUser(); if(!me) return;
+    for(const pid of local){
+      try{ await apiFetch('/api/favorites', { method: 'POST', body: { productId: pid } }); }catch(e){}
+    }
+    // after migration, refresh server favorites into local cache
+    await syncFavsFromServer();
+  }catch(e){}
 }
 
 // Sync threads/messages for the logged-in user from server into local thread store
@@ -348,6 +368,26 @@ async function syncThreadsFromServer(){
     }
     saveThreads(local);
   }catch(e){ /* ignore */ }
+}
+
+// Fetch messages for a server thread and store in local threads cache (normalize shape)
+async function fetchAndStoreThread(threadId, productId){
+  try{
+    const msgsRes = await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`);
+    if(!msgsRes || !msgsRes.ok) return;
+    const msgs = await msgsRes.json();
+    const local = loadThreads();
+    const normalized = msgs.map(m=> ({ from: m.from || m.from_role || m.fromRole || 'user', text: m.text || '', at: m.createdAt || m.created_at || m.at || Date.now(), userId: m.user_id || m.userId || null, userEmail: m.userEmail || m.user_email || null, userName: m.userName || m.user_name || null }));
+    if(productId){
+      local[productId] = normalized;
+      local[productId].__threadId = threadId;
+    } else {
+      local[threadId] = normalized;
+      local[threadId].__threadId = threadId;
+    }
+    saveThreads(local);
+    return normalized;
+  }catch(e){ return null; }
 }
 
 // Toggle favorite and attempt server update if authenticated
@@ -802,7 +842,7 @@ function initLogin() {
       // (reloading can re-trigger auth checks that depend on cookies/localStorage timing)
       try{ window.ISMART_LOGGED_IN = true; }catch(e){}
       // Optionally refresh parts of the UI that depend on auth (best-effort)
-      try{ const currentUser = await checkCurrentUser(); if(currentUser) { console.log('User after login:', currentUser.email); try{ await syncFavsFromServer(); renderFavorites(productsCache); }catch(e){} try{ await syncThreadsFromServer(); renderChatList(productsCache); }catch(e){} } }catch(e){}
+      try{ const currentUser = await checkCurrentUser(); if(currentUser) { console.log('User after login:', currentUser.email); try{ await migrateLocalFavsToServer(); await syncFavsFromServer(); renderFavorites(productsCache); }catch(e){} try{ await syncThreadsFromServer(); renderChatList(productsCache); }catch(e){} } }catch(e){}
     } catch (err) {
       console.error('Login error:', err);
       alert('Ошибка входа: ' + err.message);
@@ -1090,6 +1130,7 @@ onReady(async function(){
   } else {
     console.log('User already logged in:', currentUser.email);
     // sync server-side favorites and threads into local cache so UI reflects account data
+    try{ await migrateLocalFavsToServer(); }catch(e){}
     try{ await syncFavsFromServer(); }catch(e){}
     try{ await syncThreadsFromServer(); }catch(e){}
   }
