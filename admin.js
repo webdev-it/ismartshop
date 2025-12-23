@@ -338,8 +338,20 @@
     });
     // attach send handler
     $('#chat-send').onclick = ()=>{
-      const input = $('#chat-input'); const text = input.value.trim(); if(!text) return; const msg = { from:'admin', text, at: Date.now() };
-      thread.push(msg); threads[id] = thread; saveThreads(threads); openThread(id); renderThreads(); input.value='';
+      const input = $('#chat-input'); const text = input.value.trim(); if(!text) return;
+      (async ()=>{
+        // Try to POST to API (admin endpoint). If API not reachable, fall back to local update.
+        const apiRes = await tryApi('POST', `/api/threads/${id}/messages`, { text });
+        if(apiRes){
+          // If API succeeded, refresh threads listing from API
+          try{ const refreshed = await tryApi('GET','/api/admin/threads'); if(refreshed){ saveThreads(refreshed); renderThreads(); openThread(id); } }
+          catch(e){}
+        } else {
+          const msg = { from:'admin', text, at: Date.now() };
+          thread.push(msg); threads[id] = thread; saveThreads(threads); openThread(id); renderThreads();
+        }
+        input.value='';
+      })();
     };
   }
 
