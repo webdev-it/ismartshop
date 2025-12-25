@@ -85,7 +85,9 @@ body{
   max-width:420px;
   margin:0 auto;
   min-height:100vh;
-  padding:12px 12px 32px;
+  /* Make room at the bottom so a fixed tabbar doesn't cover the footer.
+     Increased to ensure footer fully scrolls above the tabbar on small screens. */
+  padding:12px 12px 220px;
   position:relative;
   display:flex;
   flex-direction:column;
@@ -237,6 +239,7 @@ body{
 .card .footer .buy{font-weight:800}
 
 .tabbar{position:fixed;left:12px;right:12px;bottom:16px;height:72px;border-radius:24px;background:var(--tabbar-bg);display:flex;align-items:center;justify-content:space-around;padding:8px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.08)}
+.tabbar{z-index:9999}
 .tab{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:12px;cursor:pointer}
 .tab span{font-size:12px;color:var(--muted)}
 .tab.active{background:var(--pill-active-bg);padding:8px 18px;border-radius:18px}
@@ -401,6 +404,7 @@ body{
 
 /* Footer styles */
 .site-footer{position:relative;z-index:60;padding:18px 12px;background:transparent;border-top:1px solid rgba(0,0,0,0.04);backdrop-filter:blur(6px);margin-top:22px}
+.site-footer{z-index:1000}
 .site-footer-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .footer-left{display:flex;flex-direction:column}
 .footer-brand{font-weight:800;font-size:18px}
