@@ -389,10 +389,21 @@
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   // Navigation
+  let chatPollingInterval = null;
   function showView(name){
     $all('.admin-view').forEach(v=> v.classList.add('hidden'));
     const el = document.getElementById('view-'+name); if(el) el.classList.remove('hidden');
     $all('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
+    // Start polling for chats when entering chats view
+    if(name === 'chats'){
+      if(chatPollingInterval) clearInterval(chatPollingInterval);
+      chatPollingInterval = setInterval(async () => {
+        await renderThreads();
+      }, 5000); // poll every 5 seconds
+    } else {
+      if(chatPollingInterval) clearInterval(chatPollingInterval);
+      chatPollingInterval = null;
+    }
   }
 
 

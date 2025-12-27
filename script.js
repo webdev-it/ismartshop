@@ -146,6 +146,9 @@ let productsCache = [];
 let categoriesCache = [];
 let currentChatId = null;
 let currentProductId = null;
+// polling for user chat updates when chat view is open
+let userChatPollingInterval = null;
+const USER_CHAT_POLL_MS = 4000;
 
 // Open chat view for productId
 function openChat(productId, prefillMessage){
@@ -207,15 +210,33 @@ function openChat(productId, prefillMessage){
       }
     }catch(e){ console.log('Server message send failed (local cache still works):', e && e.message); }
   };
+
+  // start polling for incoming messages for this product/thread
+  try{ if(userChatPollingInterval) clearInterval(userChatPollingInterval);
+    userChatPollingInterval = setInterval(async ()=>{
+      try{
+        const threadId = getThreadIdForProduct(productId);
+        if(!threadId) return; // nothing on server yet
+        const fresh = await fetchAndStoreThread(threadId, productId);
+        if(fresh && fresh.length){
+          messagesEl.innerHTML = '';
+          for(const m of fresh){ const elmsg = document.createElement('div'); elmsg.className = 'msg ' + (m.from === 'user' ? 'user' : 'admin'); elmsg.textContent = m.text; messagesEl.appendChild(elmsg); }
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          // update thread preview in list
+          const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = fresh[fresh.length-1].text.slice(0,60);
+        }
+      }catch(e){}
+    }, USER_CHAT_POLL_MS);
+  }catch(e){}
 }
 
 // chat delete from header
 document.getElementById('chat-delete').addEventListener('click', ()=>{
   if(!currentChatId) return;
-  if(confirm('Удалить этот чат?')){ deleteThread(currentChatId); renderChatList(productsCache); document.getElementById('chat-view').style.display = 'none'; }
+  if(confirm('Удалить этот чат?')){ deleteThread(currentChatId); renderChatList(productsCache); document.getElementById('chat-view').style.display = 'none'; try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){} }
 });
 // ensure chat-open class removed when chat deleted
-document.getElementById('chat-delete')?.addEventListener('click', ()=>{ document.querySelector('.app')?.classList.remove('chat-open'); });
+document.getElementById('chat-delete')?.addEventListener('click', ()=>{ document.querySelector('.app')?.classList.remove('chat-open'); try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){} });
 
 function deleteThread(productId){ const t = loadThreads(); if(t[productId]){ delete t[productId]; saveThreads(t); } }
 
@@ -268,6 +289,7 @@ document.addEventListener('click', (e)=>{
   if(e.target && e.target.id === 'chat-back'){
     document.getElementById('chat-view').style.display = 'none';
     document.querySelector('.app')?.classList.remove('chat-open');
+    try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){}
   }
 });
 
