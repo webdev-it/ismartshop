@@ -321,6 +321,7 @@
   // Chat rendering
   function renderThreads(){
     const raw = loadThreads(); const container = $('#chat-threads'); container.innerHTML='';
+    console.log('[Admin] renderThreads got raw threads:', Array.isArray(raw) ? raw.length : Object.keys(raw || {}).length);
     // support both API array response and local object map
     if(!raw || (Array.isArray(raw) && raw.length === 0) || (typeof raw === 'object' && Object.keys(raw).length === 0)){
       container.innerHTML = '<p>Пока нет чатов.</p>'; $('#chat-messages').innerHTML=''; return;

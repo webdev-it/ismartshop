@@ -194,11 +194,17 @@ function openChat(productId, prefillMessage){
       if(!threadId){
         const body = { productId, text };
         if(me && me.id){ body.userId = me.id; body.userName = me.name || 'Пользователь'; }
+        console.log('[Client] Creating server thread', { productId, preview: text.slice(0,80), userId: body.userId || null });
         const resp = await apiFetch('/api/threads', { method: 'POST', body });
-        if(resp && resp.ok){ const j = await resp.json().catch(()=>null); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
+        if(resp){ console.log('[Client] POST /api/threads status', resp.status); }
+        if(resp && resp.ok){ const j = await resp.json().catch(()=>null); console.log('[Client] POST /api/threads response', j); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
+        else { console.warn('[Client] Creating thread failed or unauthenticated; continuing with local cache'); }
       } else {
         // post message to existing thread; this endpoint requires authentication, so attempt and fall back to local cache on failure
-        try{ await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } }); }catch(e){}
+        try{
+          const resp2 = await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } });
+          if(resp2){ console.log('[Client] POST /api/threads/:id/messages status', resp2.status); }
+        }catch(e){ console.error('[Client] Error posting message to server thread', e && e.message); }
       }
       // Fetch fresh messages for this thread (so admin replies are synced) and update local cache/UI
       if(threadId){
