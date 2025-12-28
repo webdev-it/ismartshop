@@ -188,15 +188,17 @@ function openChat(productId, prefillMessage){
 
     try{
       const me = await checkCurrentUser();
-      if(!me) return; // keep local-only when not logged in
-      // If no thread exists on server for this product, create it and post initial message
+      // If no thread exists on server for this product, create it and post initial message.
+      // Allow creating the initial thread even for unauthenticated users (server accepts userId null).
       let threadId = getThreadIdForProduct(productId);
       if(!threadId){
-        const resp = await apiFetch('/api/threads', { method: 'POST', body: { productId, text, userId: me.id, userName: me.name || 'Пользователь' } });
+        const body = { productId, text };
+        if(me && me.id){ body.userId = me.id; body.userName = me.name || 'Пользователь'; }
+        const resp = await apiFetch('/api/threads', { method: 'POST', body });
         if(resp && resp.ok){ const j = await resp.json().catch(()=>null); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
       } else {
-        // post message to existing thread
-        await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } });
+        // post message to existing thread; this endpoint requires authentication, so attempt and fall back to local cache on failure
+        try{ await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } }); }catch(e){}
       }
       // Fetch fresh messages for this thread (so admin replies are synced) and update local cache/UI
       if(threadId){
