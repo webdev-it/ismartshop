@@ -223,15 +223,27 @@ function toggleFav(id){ const f = loadFavs(); const idx = f.indexOf(id); if(idx>
 async function syncFavsFromServer(){
   try{
     const me = await checkCurrentUser();
-    if(!me) return; // only sync for logged-in users
+    if(!me){ 
+      console.log('[Sync Favs] Not logged in, skipping server sync');
+      return; // only sync for logged-in users
+    }
+    console.log('[Sync Favs] Syncing for user:', me.email);
     const res = await apiFetch('/api/favorites');
-    if(!res || !res.ok) return;
+    if(!res || !res.ok){ 
+      console.warn('[Sync Favs] Server returned status:', res ? res.status : 'null');
+      return;
+    }
     const rows = await res.json();
+    console.log('[Sync Favs] Got from server:', rows);
     // rows may be array of {product_id} or legacy shapes; normalize
     const ids = rows.map(r => r.product_id || r.productId || (typeof r === 'string' ? r : null)).filter(Boolean);
+    console.log('[Sync Favs] Normalized IDs:', ids);
     // replace local favorites with server-side favorites (server is source-of-truth for logged-in users)
     saveFavs(ids);
-  }catch(e){ /* ignore */ }
+    console.log('[Sync Favs] Saved to local storage');
+  }catch(e){ 
+    console.error('[Sync Favs] Error:', e && e.message);
+  }
 }
 
 // Migrate any locally-stored favorites into the server-side account (called on login)
@@ -256,10 +268,20 @@ function toggleFavAndSync(id){
   (async ()=>{
     try{
       const me = await checkCurrentUser();
-      if(!me) return; // no-op
-      if(adding){ await apiFetch('/api/favorites', { method: 'POST', body: { productId: id } }); }
-      else { await apiFetch(`/api/favorites/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
-    }catch(e){ console.warn('Fav sync failed:', e && e.message); }
+      if(!me){ 
+        console.log('[Fav Toggle] Not logged in, local only');
+        return; // no-op
+      }
+      console.log('[Fav Toggle] Syncing with server:', { action: adding ? 'add' : 'remove', productId: id, user: me.email });
+      if(adding){ 
+        const res = await apiFetch('/api/favorites', { method: 'POST', body: { productId: id } });
+        console.log('[Fav Toggle] Add response:', res ? res.status : 'null');
+      }
+      else { 
+        const res = await apiFetch(`/api/favorites/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        console.log('[Fav Toggle] Delete response:', res ? res.status : 'null');
+      }
+    }catch(e){ console.error('[Fav Toggle] Sync failed:', e && e.message); }
   })();
 }
 
@@ -769,9 +791,18 @@ async function renderProfile(){
     // Setup logout button
     const logoutBtn = document.getElementById('profile-logout');
     if(logoutBtn){
-      logoutBtn.onclick = ()=>{
+      logoutBtn.onclick = async ()=>{
         if(confirm('Вы уверены что хотите выйти?')){
+          // Call server logout endpoint to clear session cookie
+          try{
+            await apiFetch('/auth/logout', { method: 'POST' });
+          }catch(e){
+            console.warn('Logout API call failed:', e && e.message);
+          }
+          // Clear local user and favorites
           clearUser();
+          try{ localStorage.removeItem('ismart_favs_v1'); }catch(e){}
+          // Reload to show login screen
           location.reload();
         }
       };
