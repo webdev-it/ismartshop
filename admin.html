@@ -21,29 +21,32 @@
 
   <div class="admin-app">
     <div id="admin-login-modal" class="admin-login-modal hidden">
-      <div class="admin-login-card">
+        <div class="admin-login-card">
         <h3>Вход в админку</h3>
-        <div class="form-row"><input id="admin-login-username" placeholder="Логин"/></div>
-        <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль"/></div>
-        <div class="form-row" style="text-align:right"><button id="admin-login-submit" disabled>Войти</button></div>
+        <div class="form-row"><input id="admin-login-username" placeholder="Логин" aria-label="Логин администратора"/></div>
+        <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль" aria-label="Пароль администратора"/></div>
+        <div class="form-row" style="text-align:right"><button id="admin-login-submit" class="btn-primary" disabled aria-label="Вход в админ-панель">Войти</button></div>
       </div>
     </div>
     <aside class="admin-sidebar">
       <div class="admin-logo">iSmartShop — Admin</div>
-      <nav>
+      <nav role="navigation" aria-label="Главная навигация">
         <button class="nav-btn" data-view="dashboard">Панель</button>
         <button class="nav-btn" data-view="products">Товары</button>
         <button class="nav-btn" data-view="categories">Категории</button>
         <button class="nav-btn" data-view="chats">Чаты</button>
         <button class="nav-btn" data-view="database">База данных</button>
       </nav>
-      <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout">Выйти</button></div>
+      <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout" class="btn-ghost" aria-label="Выйти из админ панели">Выйти</button></div>
     </aside>
 
     <main class="admin-main">
       <header class="admin-header">
-        <div id="admin-status">Статус: <span id="admin-status-text">offline</span></div>
-        <div class="admin-actions"><button id="btn-refresh">Обновить</button></div>
+        <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
+        <div class="admin-actions">
+          <button id="btn-refresh" class="btn-ghost" aria-label="Обновить данные">Обновить</button>
+          <button id="theme-toggle" class="btn-ghost" role="switch" aria-checked="false" aria-label="Переключить тему">🌗</button>
+        </div>
       </header>
 
       <section id="view-dashboard" class="admin-view">
@@ -57,9 +60,9 @@
 
       <section id="view-products" class="admin-view hidden">
         <h2>Товары</h2>
-        <div class="admin-panel-row">
+            <div class="admin-panel-row">
           <div class="panel-left">
-            <button id="btn-new-product">Добавить товар</button>
+            <button id="btn-new-product" class="btn-primary" aria-label="Добавить товар">Добавить товар</button>
             <div id="products-list"></div>
           </div>
           <div class="panel-right">
@@ -72,7 +75,7 @@
         <h2>Категории</h2>
         <div class="admin-panel-row">
           <div class="panel-left">
-            <button id="btn-new-category">Добавить категорию</button>
+            <button id="btn-new-category" class="btn-primary" aria-label="Добавить категорию">Добавить категорию</button>
             <div id="categories-list"></div>
           </div>
           <div class="panel-right">
@@ -105,7 +108,7 @@
 
             <div class="card">
               <div class="card-title">Пользователи</div>
-              <div style="margin-top:8px"><button id="db-refresh-users">Обновить список</button> <button id="db-truncate-users">Очистить всех</button></div>
+              <div style="margin-top:8px"><button id="db-refresh-users" class="btn-ghost">Обновить список</button> <button id="db-truncate-users" class="btn-ghost">Очистить всех</button></div>
               <div id="db-users-list" style="margin-top:12px;max-height:360px;overflow:auto"></div>
             </div>
           </div>
@@ -113,13 +116,13 @@
           <div class="panel-right">
             <div class="card" style="margin-bottom:12px">
               <div class="card-title">Операции</div>
-              <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json">Сделать бэкап JSON</button><button id="db-vacuum">VACUUM</button></div>
+              <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json" class="btn-ghost">Сделать бэкап JSON</button><button id="db-vacuum" class="btn-ghost">VACUUM</button></div>
             </div>
 
             <div class="card">
               <div class="card-title">Выполнить SQL (Postgres)</div>
-              <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px"></textarea>
-              <div style="text-align:right;margin-top:8px"><button id="db-exec-sql">Выполнить</button></div>
+              <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px" aria-label="SQL-запрос"></textarea>
+              <div style="text-align:right;margin-top:8px"><button id="db-exec-sql" class="btn-primary" aria-label="Выполнить SQL">Выполнить</button></div>
               <pre id="db-sql-result" style="margin-top:8px;max-height:240px;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;display:none"></pre>
             </div>
           </div>
