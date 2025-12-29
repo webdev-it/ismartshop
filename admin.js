@@ -408,6 +408,40 @@
   // Utils
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+  // Theme and accessibility helpers
+  function setTheme(t){
+    const body = document.body;
+    if(t === 'light') body.classList.add('theme-light'); else body.classList.remove('theme-light');
+    try{ localStorage.setItem('admin_theme', t); }catch(e){}
+    const toggle = document.getElementById('theme-toggle'); if(toggle) { toggle.setAttribute('aria-checked', String(t === 'light')); toggle.title = t === 'light' ? 'Светлая тема' : 'Тёмная тема'; toggle.textContent = t === 'light' ? '☀️' : '🌗'; }
+  }
+
+  function applyInitialTheme(){
+    try{
+      const saved = localStorage.getItem('admin_theme');
+      if(saved) return setTheme(saved);
+      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      setTheme(prefers ? 'light' : 'dark');
+    }catch(e){ setTheme('dark'); }
+  }
+
+  function enhanceAccessibility(){
+    // Add ARIA roles/labels to nav buttons
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      if(!b.hasAttribute('aria-label')) b.setAttribute('aria-label', b.textContent.trim());
+      b.setAttribute('role','button');
+      b.tabIndex = 0;
+      b.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); } });
+    });
+    // Ensure action buttons have accessible names
+    ['btn-refresh','btn-new-product','btn-new-category','admin-logout','db-refresh-users','db-truncate-users','db-backup-json','db-vacuum','db-exec-sql'].forEach(id=>{
+      const el = document.getElementById(id); if(el && !el.hasAttribute('aria-label')) el.setAttribute('aria-label', el.textContent.trim());
+    });
+    // Theme toggle keyboard support
+    const themeToggle = document.getElementById('theme-toggle');
+    if(themeToggle){ themeToggle.addEventListener('click', ()=>{ const isLight = document.body.classList.contains('theme-light'); setTheme(isLight ? 'dark' : 'light'); }); themeToggle.tabIndex = 0; themeToggle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); themeToggle.click(); } }); }
+  }
+
   // Navigation
   function showView(name){
     $all('.admin-view').forEach(v=> v.classList.add('hidden'));
@@ -418,6 +452,9 @@
 
   // Init
   async function init(){
+    // apply theme and accessibility enhancements early
+    applyInitialTheme();
+    enhanceAccessibility();
     // wire nav
     $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
     $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); loadAdminDBInfo(); loadAdminUsers(); });
