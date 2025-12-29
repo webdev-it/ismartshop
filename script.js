@@ -141,7 +141,12 @@ function showProduct(productId){
   showView('view-product');
   currentProductId = productId;
   const p = productsCache.find(x=>x.id === productId) || {title:'Товар', image:''};
-  const img = document.getElementById('product-img'); if(img) img.src = p.image || '';
+  const img = document.getElementById('product-img');
+  if(img){
+    img.src = p.image || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    img.style.opacity = '1';
+    img.onerror = ()=>{ img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; img.style.opacity = '0.4'; };
+  }
   const priceEl = document.getElementById('product-price'); if(priceEl) priceEl.textContent = p.price || '';
   const titleEl = document.getElementById('product-title'); if(titleEl) titleEl.textContent = p.title || '';
   const descEl = document.getElementById('product-desc'); if(descEl) descEl.textContent = p.description || '';
@@ -747,7 +752,7 @@ function renderFavorites(products){
     card.dataset.id = p.id;
     card.innerHTML = `
       <div class="card-surface">
-        <div class="image"><img src="${p.image}" alt="${p.title}"/></div>
+        <div class="image"></div>
         <div class="footer">
           <div class="price">${p.price}</div>
           <div class="title">${p.title}</div>
@@ -755,6 +760,13 @@ function renderFavorites(products){
         </div>
       </div>
     `;
+    // Safely add image with error handling
+    const favImgWrap = card.querySelector('.image');
+    const favImg = document.createElement('img');
+    favImg.alt = p.title || '';
+    favImg.src = p.image || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    favImg.onerror = ()=>{ favImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; favImg.style.opacity = '0.4'; };
+    favImgWrap.appendChild(favImg);
     // favorite button (heart icon)
     const favBtn = document.createElement('button'); favBtn.className = 'fav-btn active'; favBtn.dataset.id = p.id; favBtn.innerHTML = `
       <svg viewBox="0 0 24 24" class="icon"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
@@ -834,7 +846,7 @@ function renderProducts(products){
         </div>
       </div>
     `;
-    // create image element safely (avoid direct innerHTML src insertion)
+    // create image element safely with error handling
     const imgWrap = card.querySelector('.image');
     const imgEl = document.createElement('img');
     imgEl.alt = p.title || '';
@@ -846,6 +858,8 @@ function renderProducts(products){
     } else {
       imgEl.src = src;
     }
+    // Add error handler for failed image loads
+    imgEl.onerror = ()=>{ imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; imgEl.style.opacity = '0.4'; };
     imgWrap.appendChild(imgEl);
     // add favorite button overlay
     const favBtn = document.createElement('button');

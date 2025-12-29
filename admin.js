@@ -181,20 +181,114 @@
     const products = await loadProducts();
     const product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', image:'', category:'', description:'', colors:[] };
     const cats = await loadCategories();
+    
+    // Helper: Image uploader and cropper
+    let selectedImageData = product.image; // base64 or URL
+    const createImageSection = () => {
+      const section = document.createElement('div');
+      section.innerHTML = `
+        <label style="display:block;margin-bottom:8px">Изображение<br>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input type="file" id="image-upload" accept="image/*" style="flex:1">
+            <button type="button" id="crop-image" ${!selectedImageData ? 'disabled' : ''}>Обрезать</button>
+          </div>
+        </label>
+        <div id="image-preview" style="margin-top:12px;border-radius:8px;overflow:hidden;${selectedImageData ? `background:url('${selectedImageData}') center/cover;width:200px;height:200px;border:1px solid #ddd` : 'display:none'};"></div>
+        <input type="hidden" name="image" value="${selectedImageData ? selectedImageData.substring(0, 100) + '...' : ''}">
+      `;
+      
+      const uploadInput = section.querySelector('#image-upload');
+      const cropBtn = section.querySelector('#crop-image');
+      const preview = section.querySelector('#image-preview');
+      const hiddenInput = section.querySelector('input[name="image"]');
+      
+      uploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          selectedImageData = evt.target.result;
+          preview.style.backgroundImage = `url('${selectedImageData}')`;
+          preview.style.display = 'block';
+          cropBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      cropBtn.addEventListener('click', () => {
+        if(!selectedImageData) return;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Размеры карточки товара (пропорции)
+          const targetWidth = 280;
+          const targetHeight = 280;
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          
+          // Вычисляем масштабирование для заполнения canvas с обрезкой
+          const imgAspect = img.width / img.height;
+          const canvasAspect = targetWidth / targetHeight;
+          let srcWidth, srcHeight, srcX = 0, srcY = 0;
+          
+          if(imgAspect > canvasAspect) {
+            // Изображение шире - обрезаем бока
+            srcHeight = img.height;
+            srcWidth = img.height * canvasAspect;
+            srcX = (img.width - srcWidth) / 2;
+          } else {
+            // Изображение выше - обрезаем сверху/снизу
+            srcWidth = img.width;
+            srcHeight = img.width / canvasAspect;
+            srcY = (img.height - srcHeight) / 2;
+          }
+          
+          ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, targetWidth, targetHeight);
+          selectedImageData = canvas.toDataURL('image/jpeg', 0.9);
+          preview.style.backgroundImage = `url('${selectedImageData}')`;
+        };
+        img.src = selectedImageData;
+      });
+      
+      return section;
+    };
+    
     const form = document.createElement('form');
     form.innerHTML = `
-      <label>Название<br><input name="title" value="${escapeHtml(product.title)}"></label>
-      <label>Цена<br><input name="price" value="${escapeHtml(product.price)}"></label>
-      <label>Категория<br><select name="category">${cats.map(c=>`<option value="${c.id}" ${c.id===product.category? 'selected':''}>${c.name}</option>`).join('')}</select></label>
-      <label>Изображение (путь)<br><input name="image" value="${escapeHtml(product.image)}"></label>
-      <label>Описание<br><textarea name="description">${escapeHtml(product.description)}</textarea></label>
+      <label>Название<br><input name="title" value="${escapeHtml(product.title)}" style="width:100%"></label>
+      <label style="display:block;margin-top:8px">Цена (₽)<br><input name="price" type="text" inputmode="numeric" placeholder="0" value="${escapeHtml(product.price.toString().replace(/[^\d]/g, ''))}" style="width:100%"></label>
+      <label style="display:block;margin-top:8px">Категория<br><select name="category" style="width:100%">${cats.map(c=>`<option value="${c.id}" ${c.id===product.category? 'selected':''}>${c.name}</option>`).join('')}</select></label>
+      <label style="display:block;margin-top:8px">Описание<br><textarea name="description" style="width:100%;min-height:80px">${escapeHtml(product.description)}</textarea></label>
       <div style="margin-top:8px"><button type="submit">Сохранить</button> <button type="button" id="cancel-product">Отмена</button></div>
     `;
+    
+    // Insert image section after title
+    const titleLabel = form.querySelector('label');
+    titleLabel.parentNode.insertBefore(createImageSection(), titleLabel.nextSibling);
+    
     wrap.appendChild(form);
+    
+    // Handle price input - только цифры, автоматически добавляем рубль
+    const priceInput = form.querySelector('input[name="price"]');
+    priceInput.addEventListener('input', (e) => {
+      let value = e.target.value.replace(/[^\d]/g, '');
+      e.target.value = value;
+    });
+    priceInput.addEventListener('blur', (e) => {
+      if(e.target.value) e.target.value = e.target.value + ' ₽';
+    });
+    priceInput.addEventListener('focus', (e) => {
+      e.target.value = e.target.value.replace(/[^\d]/g, '');
+    });
+    
     $('#cancel-product').addEventListener('click', ()=>{ wrap.innerHTML=''; });
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const fd = new FormData(form); const updated = { id: product.id, title: fd.get('title'), price: fd.get('price'), image: fd.get('image'), category: fd.get('category'), description: fd.get('description'), colors: [] };
+      const fd = new FormData(form);
+      let priceValue = fd.get('price').replace(/[^\d]/g, '');
+      const updated = { id: product.id, title: fd.get('title'), price: priceValue, image: selectedImageData, category: fd.get('category'), description: fd.get('description'), colors: [] };
       // try to save to API (POST for new, PUT for existing). Fallback to localStorage on failure.
       const existing = (await loadProducts()).some(p=>p.id === product.id);
       let ok = null;
