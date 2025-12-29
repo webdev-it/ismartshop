@@ -110,6 +110,18 @@ async function fetchConfig(){
   }
 }
 
+// Format price for display: ensure a trailing ₽ if missing
+function formatPrice(p){
+  try{
+    if(p === null || p === undefined) return '';
+    let s = String(p).trim();
+    if(!s) return '';
+    // If already contains currency symbol, return as-is
+    if(/₽|руб\.?/i.test(s)) return s;
+    return s + ' ₽';
+  }catch(e){ return String(p || ''); }
+}
+
 // --- Chat / threads storage (localStorage) ---
 // REMOVED: Chat system completely removed, replaced with Telegram redirect
 
@@ -147,7 +159,7 @@ function showProduct(productId){
     img.style.opacity = '1';
     img.onerror = ()=>{ img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; img.style.opacity = '0.4'; };
   }
-  const priceEl = document.getElementById('product-price'); if(priceEl) priceEl.textContent = p.price || '';
+  const priceEl = document.getElementById('product-price'); if(priceEl) priceEl.textContent = formatPrice(p.price || '');
   const titleEl = document.getElementById('product-title'); if(titleEl) titleEl.textContent = p.title || '';
   const descEl = document.getElementById('product-desc'); if(descEl) descEl.textContent = p.description || '';
   const colorsEl = document.getElementById('product-colors'); if(colorsEl){ colorsEl.innerHTML = ''; if(p.colors && p.colors.length) colorsEl.textContent = 'Доступные цвета: ' + p.colors.join(', '); }
@@ -754,7 +766,7 @@ function renderFavorites(products){
       <div class="card-surface">
         <div class="image"></div>
         <div class="footer">
-          <div class="price">${p.price}</div>
+          <div class="price">${formatPrice(p.price)}</div>
           <div class="title">${p.title}</div>
           <button class="buy">Купить</button>
         </div>
@@ -840,7 +852,7 @@ function renderProducts(products){
       <div class="card-surface">
         <div class="image"></div>
         <div class="footer">
-          <div class="price">${p.price}</div>
+          <div class="price">${formatPrice(p.price)}</div>
           <div class="title">${p.title}</div>
           <button class="buy">Купить</button>
         </div>

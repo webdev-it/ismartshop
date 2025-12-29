@@ -60,11 +60,25 @@ form input, form textarea, form select, textarea{width:100%;padding:10px;border-
 form input:focus, textarea:focus, select:focus{box-shadow:0 6px 20px rgba(79,156,255,0.06);border-color:rgba(79,156,255,0.18)}
 #image-preview{border-radius:10px;overflow:hidden;width:200px;height:200px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px dashed rgba(255,255,255,0.03)}
 
-/* Chat */
-.chat-wrap{display:flex;gap:12px}
-.chat-threads, .chat-window{background:transparent;border-radius:10px}
-.chat-messages{max-height:420px;overflow:auto;padding:8px}
-.chat-composer input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:var(--panel);color:var(--text)}
+/* Top navigation design (pill buttons) */
+.admin-top-nav{display:flex;gap:12px;align-items:center}
+.admin-top-nav .nav-btn{background:#eef3fb;color:#0b1724;padding:14px 22px;border-radius:12px;box-shadow:0 8px 16px rgba(11,23,36,0.06);font-weight:700;border:0}
+.admin-top-nav .nav-btn:hover{transform:translateY(-2px)}
+.admin-top-nav .nav-btn.active{background:#d7dbe3;color:#0b1724;box-shadow:inset 0 -6px 18px rgba(0,0,0,0.06)}
+.admin-top-nav .nav-btn[data-view="database"]{background:#ff8a00;color:#081218;border-radius:10px;padding:14px 26px;font-weight:800;box-shadow:0 8px 20px rgba(255,138,0,0.14);text-transform:uppercase;letter-spacing:1px}
+
+/* Big header watermark */
+.admin-main::before{content:'ADMIN';position:absolute;right:48px;top:18px;font-size:48px;color:rgba(11,50,100,0.06);font-weight:800;pointer-events:none}
+
+/* Panel inner card look for left content */
+.panel-right{background:linear-gradient(180deg,#eef6ff, #e9f0ff);border-radius:22px;padding:28px;box-shadow:0 18px 40px rgba(2,8,30,0.06);border:1px solid rgba(11,50,100,0.04)}
+.panel-right h3, .panel-right .muted{color:#0b1724}
+.panel-right .form-section{background:rgba(11,50,100,0.04);padding:20px;border-radius:20px}
+.panel-right input, .panel-right textarea{border-radius:32px;background:#e6eaf6;padding:14px}
+
+/* Statistic cards style (rounded pale-blue inner) */
+.cards .card{background:transparent;border-radius:18px;padding:18px}
+.cards .card .card-value{background:#eaf1ff;color:#081218;padding:22px;border-radius:18px;font-size:32px;display:inline-block;min-width:110px;text-align:center}
 
 /* Database / SQL box */
 #db-sql{background:#071022;color:var(--muted);border-radius:10px}
