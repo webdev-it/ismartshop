@@ -125,6 +125,11 @@ function showView(id){
   // hide search on non-home views
   const searchRow = document.querySelector('.search-row');
   if(searchRow) searchRow.style.display = (id === 'view-home' ? '' : 'none');
+  // hide JivoSite chat widget on profile view
+  const jivoChatWidget = document.querySelector('.jivochat-container, [class*="jivo"]');
+  if(jivoChatWidget) {
+    jivoChatWidget.style.display = (id === 'view-profile' ? 'none' : '');
+  }
 }
 
 let productsCache = [];
