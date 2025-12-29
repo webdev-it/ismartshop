@@ -1,157 +1,126 @@
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>iSmartShop — Admin</title>
-  <link rel="stylesheet" href="admin.css">
-  <script>
-    // Backend API base (deployed on Render)
-    window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
-  </script>
-</head>
-<body>
-  <!-- Cookie access banner / check for admin -->
-  <div id="admin-cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div style="flex:1">Для входа в админ-панель требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — разрешите cookies в настройках браузера и используйте HTTPS.</div>
-      <div style="display:flex;gap:8px"><button id="admin-cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="admin-cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
-    </div>
-  </div>
+/* admin.css — Minimalist, powerful admin UI
+   Responsive, modern, subtle animations and clear information hierarchy
+*/
+:root{
+  --bg: #0f1724; /* deep slate */
+  --panel: #0b1220;
+  --muted: #9aa4b2;
+  --text: #e6eef6;
+  --accent: #4f9cff; /* primary blue */
+  --accent-2: #7be0a6; /* success green */
+  --glass: rgba(255,255,255,0.04);
+  --soft: rgba(255,255,255,0.02);
+  --shadow: 0 8px 28px rgba(2,6,23,0.6);
+  --radius: 12px;
+  --gap: 16px;
+  --sidebar-w: 260px;
+  --max-w: 1200px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;font-size:15px;background:linear-gradient(180deg,var(--bg),#030417);color:var(--text);-webkit-font-smoothing:antialiased}
+.admin-app{width:100%;max-width:var(--max-w);margin:18px auto;display:flex;gap:var(--gap);min-height:calc(100vh - 36px);align-items:flex-start}
 
-  <div class="admin-app">
-    <div id="admin-login-modal" class="admin-login-modal hidden">
-        <div class="admin-login-card">
-        <h3>Вход в админку</h3>
-        <div class="form-row"><input id="admin-login-username" placeholder="Логин" aria-label="Логин администратора"/></div>
-        <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль" aria-label="Пароль администратора"/></div>
-        <div class="form-row" style="text-align:right"><button id="admin-login-submit" class="btn-primary" disabled aria-label="Вход в админ-панель">Войти</button></div>
-      </div>
-    </div>
-    <aside class="admin-sidebar">
-      <div class="admin-logo">iSmartShop — Admin</div>
-      <nav role="navigation" aria-label="Главная навигация">
-        <button class="nav-btn" data-view="dashboard">Панель</button>
-        <button class="nav-btn" data-view="products">Товары</button>
-        <button class="nav-btn" data-view="categories">Категории</button>
-        <button class="nav-btn" data-view="chats">Чаты</button>
-        <button class="nav-btn" data-view="database">База данных</button>
-      </nav>
-      <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout" class="btn-ghost" aria-label="Выйти из админ панели">Выйти</button></div>
-    </aside>
+/* SIDEBAR */
+.admin-sidebar{width:var(--sidebar-w);min-width:200px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:14px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.admin-logo{font-weight:800;font-size:18px;letter-spacing:0.2px;color:var(--text)}
+.admin-sidebar nav{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.nav-btn{background:transparent;border:0;padding:12px 10px;border-radius:10px;text-align:left;font-weight:700;cursor:pointer;color:var(--muted);transition:all 160ms ease}
+.nav-btn:hover{color:var(--text);transform:translateX(6px)}
+.nav-btn.active{color:var(--text);background:linear-gradient(90deg,rgba(79,156,255,0.12),rgba(123,224,166,0.04));box-shadow:inset 0 -1px 0 rgba(255,255,255,0.02);}
+#admin-logout{margin-top:auto;border:0;padding:10px;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer}
+#admin-logout:hover{color:var(--accent)}
 
-    <main class="admin-main">
-      <header class="admin-header">
-        <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
-        <div class="admin-actions">
-          <button id="btn-refresh" class="btn-ghost" aria-label="Обновить данные">Обновить</button>
-          <button id="theme-toggle" class="btn-ghost" role="switch" aria-checked="false" aria-label="Переключить тему">🌗</button>
-        </div>
-      </header>
+/* MAIN */
+.admin-main{flex:1;display:flex;flex-direction:column;gap:12px}
+.admin-header{display:flex;align-items:center;justify-content:space-between;padding:8px 6px}
+#admin-status{color:var(--muted);font-weight:600}
+.admin-actions button, #btn-refresh, #btn-new-product, #btn-new-category{border:0;padding:10px 14px;border-radius:10px;background:transparent;color:var(--text);cursor:pointer;box-shadow:inset 0 -1px 0 rgba(255,255,255,0.02)}
 
-      <section id="view-dashboard" class="admin-view">
-        <h2>Панель</h2>
-        <div class="cards">
-          <div class="card"><div class="card-title">Пользователей</div><div class="card-value" id="stat-users">—</div></div>
-          <div class="card"><div class="card-title">Товаров</div><div class="card-value" id="stat-products">—</div></div>
-          <div class="card"><div class="card-title">Чатов</div><div class="card-value" id="stat-threads">—</div></div>
-        </div>
-      </section>
+/* CARDS */
+.cards{display:flex;gap:12px;flex-wrap:wrap}
+.card{flex:1;min-width:160px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:14px;border-radius:12px;box-shadow:0 8px 24px rgba(3,6,18,0.6);border:1px solid rgba(255,255,255,0.02)}
+.card-title{color:var(--muted);font-weight:700}
+.card-value{font-size:22px;font-weight:800;margin-top:8px}
 
-      <section id="view-products" class="admin-view hidden">
-        <h2>Товары</h2>
-            <div class="admin-panel-row">
-          <div class="panel-left">
-            <button id="btn-new-product" class="btn-primary" aria-label="Добавить товар">Добавить товар</button>
-            <div id="products-list"></div>
-          </div>
-          <div class="panel-right">
-            <div id="product-form-wrap"></div>
-          </div>
-        </div>
-      </section>
+/* PANELS */
+.admin-panel-row{display:flex;gap:12px}
+.panel-left{flex:1;min-width:260px}
+.panel-right{flex:1.2;padding:16px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);box-shadow:0 8px 30px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.02)}
 
-      <section id="view-categories" class="admin-view hidden">
-        <h2>Категории</h2>
-        <div class="admin-panel-row">
-          <div class="panel-left">
-            <button id="btn-new-category" class="btn-primary" aria-label="Добавить категорию">Добавить категорию</button>
-            <div id="categories-list"></div>
-          </div>
-          <div class="panel-right">
-            <div id="category-form-wrap"></div>
-          </div>
-        </div>
-      </section>
+/* Lists */
+#products-list, #categories-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.admin-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.02)}
+.admin-item strong{font-weight:700}
+.admin-item .admin-item-actions button{margin-left:8px}
 
-      <section id="view-chats" class="admin-view hidden">
-        <h2>Чаты</h2>
-        <div class="chat-wrap">
-          <div class="chat-threads" id="chat-threads"></div>
-          <div class="chat-window" id="chat-window">
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="chat-composer"><input id="chat-input" placeholder="Введите сообщение..."/><button id="chat-send">Отправить</button></div>
-          </div>
-        </div>
-      </section>
+/* Forms */
+.form-row{margin-bottom:8px}
+form label{display:block;margin-bottom:6px;font-weight:600;color:var(--muted)}
+form input, form textarea, form select, textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:var(--panel);color:var(--text);outline:none}
+form input:focus, textarea:focus, select:focus{box-shadow:0 6px 20px rgba(79,156,255,0.06);border-color:rgba(79,156,255,0.18)}
+#image-preview{border-radius:10px;overflow:hidden;width:200px;height:200px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px dashed rgba(255,255,255,0.03)}
 
-      <section id="view-database" class="admin-view hidden">
-        <h2>База данных / Хранилище</h2>
-        <div class="admin-panel-row">
-          <div class="panel-left">
-            <div class="card" style="margin-bottom:12px">
-              <div class="card-title">Информация</div>
-              <div style="margin-top:8px">DB: <span id="db-info-db">—</span></div>
-              <div>Users: <span id="db-info-users">—</span></div>
-              <div>DB Size: <span id="db-info-size">—</span></div>
-            </div>
+/* Chat */
+.chat-wrap{display:flex;gap:12px}
+.chat-threads, .chat-window{background:transparent;border-radius:10px}
+.chat-messages{max-height:420px;overflow:auto;padding:8px}
+.chat-composer input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:var(--panel);color:var(--text)}
 
-            <div class="card">
-              <div class="card-title">Пользователи</div>
-              <div style="margin-top:8px"><button id="db-refresh-users" class="btn-ghost">Обновить список</button> <button id="db-truncate-users" class="btn-ghost">Очистить всех</button></div>
-              <div id="db-users-list" style="margin-top:12px;max-height:360px;overflow:auto"></div>
-            </div>
-          </div>
+/* Database / SQL box */
+#db-sql{background:#071022;color:var(--muted);border-radius:10px}
+#db-sql-result{background:#02111a;color:#d7f7e6;border-radius:8px}
 
-          <div class="panel-right">
-            <div class="card" style="margin-bottom:12px">
-              <div class="card-title">Операции</div>
-              <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json" class="btn-ghost">Сделать бэкап JSON</button><button id="db-vacuum" class="btn-ghost">VACUUM</button></div>
-            </div>
+/* Product cards (shared look) */
+.card-wrap{opacity:1;transform:none;transition:all 260ms ease}
+.card .image{height:140px;background:var(--soft);border-top-left-radius:12px;border-top-right-radius:12px;overflow:hidden}
+.card .image img{width:100%;height:100%;object-fit:cover;display:block}
+.card .footer{background:transparent;padding:14px;border-bottom-left-radius:12px;border-bottom-right-radius:12px}
+.card .footer .price{font-weight:800}
+.card .footer .title{color:var(--muted)}
 
-            <div class="card">
-              <div class="card-title">Выполнить SQL (Postgres)</div>
-              <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px" aria-label="SQL-запрос"></textarea>
-              <div style="text-align:right;margin-top:8px"><button id="db-exec-sql" class="btn-primary" aria-label="Выполнить SQL">Выполнить</button></div>
-              <pre id="db-sql-result" style="margin-top:8px;max-height:240px;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;display:none"></pre>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
+/* Buttons */
+button{cursor:pointer}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:8px;color:var(--text)}
+.btn-primary{background:linear-gradient(90deg,var(--accent),#6fb8ff);color:#042033;padding:10px 14px;border-radius:10px;border:none;font-weight:700}
 
-  <script src="admin.js"></script>
-  <script>
-    (function(){
-      const banner = document.getElementById('admin-cookie-banner');
-      const btn = document.getElementById('admin-cookie-test-btn');
-      const dismiss = document.getElementById('admin-cookie-dismiss');
-      const loginBtn = document.getElementById('admin-login-submit');
-      function testCookies(){
-        try{
-          document.cookie = 'ismart_test=1; path=/';
-          const ok = document.cookie.indexOf('ismart_test=1') !== -1;
-          if(ok){ document.cookie = 'ismart_test=; Max-Age=0; path=/'; window.ISMART_COOKIES_OK = true; banner.style.display='none'; if(loginBtn) loginBtn.disabled = false; }
-          else { window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; }
-          return ok;
-        }catch(e){ window.ISMART_COOKIES_OK = false; banner.style.display=''; if(loginBtn) loginBtn.disabled = true; return false; }
-      }
-      btn?.addEventListener('click', ()=>{ const ok = testCookies(); if(ok) alert('Cookies доступны.'); else alert('Cookies недоступны. Проверьте настройки браузера и HTTPS.'); });
-      dismiss?.addEventListener('click', ()=> banner.style.display='none');
-      // run test after small delay to allow admin.js to attach handlers
-      setTimeout(testCookies, 100);
-    })();
-  </script>
-</body>
-</html>
+/* small helpers */
+.hidden{display:none !important}
+.pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px}
+
+/* Responsive */
+@media (max-width:980px){
+  .admin-app{padding:12px;flex-direction:column}
+  .admin-sidebar{order:2;width:100%;display:flex;flex-direction:row;gap:8px;padding:10px}
+  .admin-main{order:1}
+  .admin-panel-row{flex-direction:column}
+}
+
+@media (max-width:520px){
+  .admin-logo{font-size:16px}
+  .card .image{height:120px}
+  #image-preview{width:160px;height:160px}
+  form input, textarea{padding:8px}
+}
+
+/* Transitions and theme support */
+html,body, .admin-sidebar, .admin-main, .card, .panel-right, form input, textarea, .btn-ghost, .btn-primary {
+  transition: background-color 240ms ease, color 220ms ease, border-color 220ms ease, box-shadow 260ms ease, transform 160ms ease;
+}
+
+/* Light theme overrides when body has .theme-light */
+body.theme-light{
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --muted: #556270;
+  --text: #0b1724;
+  --accent: #2b67f6;
+  --accent-2: #0ea55b;
+  --glass: rgba(11,23,36,0.04);
+  --soft: rgba(11,23,36,0.02);
+  --shadow: 0 10px 30px rgba(11,23,36,0.06);
+}
+
+/* Focus visible accessibility */
+:focus{outline: none}
+:focus-visible{outline: 3px solid rgba(79,156,255,0.18);outline-offset:2px;border-radius:8px}
+
