@@ -4,102 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>iSmartShop — Admin</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
   <script>
     // Backend API base (deployed on Render)
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
   </script>
-  <style>
-    /* Admin page styles — responsive and matching site theme */
-    :root{--sidebar-w:240px;--gap:14px}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:var(--bg-gradient);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;align-items:flex-start;justify-content:center;padding:18px}
-    .admin-app{width:100%;max-width:1100px;display:flex;gap:var(--gap);min-height:calc(100vh - 36px)}
-
-    /* Sidebar */
-    .admin-sidebar{width:var(--sidebar-w);min-width:180px;background:var(--card-white);border-radius:14px;padding:18px;display:flex;flex-direction:column;box-shadow:0 18px 40px rgba(0,0,0,0.06)}
-    .admin-logo{font-weight:800;font-size:18px;margin-bottom:12px}
-    .admin-sidebar nav{display:flex;flex-direction:column;gap:8px}
-    .nav-btn{background:transparent;border:0;padding:12px 10px;border-radius:10px;text-align:left;font-weight:700;cursor:pointer;color:var(--text)}
-    .nav-btn.active{background:var(--pill-bg);box-shadow:0 8px 18px var(--surface-shadow)}
-    #admin-logout{width:100%;border:0;padding:10px;border-radius:10px;background:linear-gradient(180deg,#f6f6f8,#efeff2);cursor:pointer}
-
-    /* Main area */
-    .admin-main{flex:1;display:flex;flex-direction:column;gap:12px}
-    .admin-header{display:flex;align-items:center;justify-content:space-between;padding:6px 8px}
-    .admin-actions button, #btn-refresh, #btn-new-product, #btn-new-category{border:0;padding:10px 14px;border-radius:10px;background:var(--control-bg);cursor:pointer}
-
-    /* Dashboard cards */
-    .cards{display:flex;gap:12px;flex-wrap:wrap}
-    .card{flex:1;min-width:160px;background:var(--card-white);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
-    .card-title{color:var(--muted);font-weight:700}
-    .card-value{font-size:22px;font-weight:800;margin-top:8px}
-
-    /* Admin panels layout */
-    .admin-panel-row{display:flex;gap:12px}
-    .panel-left{flex:1;min-width:260px}
-    .panel-right{flex:1.2;background:var(--card-white);padding:12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.04)}
-
-    /* Products/Categories lists */
-    #products-list, #categories-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-    .item-row{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:var(--pill-bg)}
-    .item-row .meta{display:flex;gap:8px;align-items:center}
-    .item-actions button{margin-left:8px}
-
-    /* Chat layout */
-    .chat-wrap{display:flex;gap:12px}
-    .chat-threads{width:260px;background:var(--card-white);padding:10px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.04);overflow:auto}
-    .chat-window{flex:1;display:flex;flex-direction:column;background:var(--card-white);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,0.04)}
-    .chat-messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:10px}
-    .chat-composer{display:flex;gap:8px;padding-top:8px}
-    .chat-composer input{flex:1;padding:12px;border-radius:10px;border:0;background:var(--frost)}
-    .chat-composer button{padding:10px 14px;border-radius:10px;border:0;background:var(--control-bg)}
-
-    /* Modal */
-    .admin-login-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:400}
-    .admin-login-card{background:var(--card-white);Padding:18px;border-radius:12px;min-width:300px;max-width:92%;box-shadow:0 18px 40px rgba(0,0,0,0.12)}
-    .admin-login-card input{width:100%;padding:10px;border-radius:8px;border:0;background:var(--frost);margin-bottom:8px}
-    .admin-login-card button{padding:10px 14px;border-radius:8px;border:0;background:var(--control-bg)}
-
-    .form-row{margin-bottom:8px}
-    .form-row input, .form-row textarea, .form-row select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 0;
-      background: var(--frost);
-      font-family: inherit;
-    }
-    .form-row textarea { min-height: 80px; resize: vertical; }
-    .form-row label { display: block; margin-bottom: 8px; font-weight: 600; }
-    form label { display: block; margin-bottom: 12px; font-weight: 600; }
-    form input, form textarea, form select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 0;
-      background: var(--frost);
-      font-family: inherit;
-      margin-top: 4px;
-    }
-    form textarea { min-height: 80px; resize: vertical; }
-    #image-preview { border: 1px solid #ddd; }
-    .admin-footer{display:flex;align-items:center;justify-content:center}
-
-    /* utility */
-    .hidden{display:none !important}
-
-    @media (max-width:840px){
-      .admin-app{flex-direction:column;padding:8px}
-      .admin-sidebar{width:100%;min-width:unset;order:2;display:flex;flex-direction:row;gap:8px;align-items:center;padding:10px;border-radius:12px}
-      .admin-sidebar nav{flex:1;display:flex;gap:6px;overflow:auto}
-      .nav-btn{flex:1;padding:10px;font-size:13px}
-      .admin-main{order:1}
-      .admin-panel-row{flex-direction:column}
-      .chat-threads{width:100%;order:2}
-      .chat-window{order:1}
-    }
-  </style>
 </head>
 <body>
   <!-- Cookie access banner / check for admin -->
