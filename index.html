@@ -49,6 +49,9 @@
       }catch(e){/* ignore */}
     })();
   </script>
+  <!-- JivoSite chat widget -->
+  <script src="//code.jivo.ru/widget/Z8QiHSnb6N" async></script>
+
 </head>
 <body class="loading">
   <!-- Loading overlay shown on first open. Hides after 3s. -->
@@ -116,21 +119,30 @@
       </section>
     </main>
 
-    <!-- Chats view -->
-    <main class="content" id="view-chats" data-view style="display:none">
-      <section class="chats-wrap">
-        <div class="chats-header">
-          <button class="pill big">Чаты</button>
+    <!-- Profile view -->
+    <main class="content" id="view-profile" data-view style="display:none">
+      <section class="profile-wrap">
+        <div class="profile-header">
+          <button class="pill big">Профиль</button>
         </div>
-        <div class="chats-panel" id="chats-panel">
-          <div class="chat-list" id="chat-list">
-            <!-- list of chats will be injected here -->
+        <div class="profile-content" id="profile-content">
+          <div class="profile-info">
+            <div class="profile-field">
+              <label>Имя:</label>
+              <div id="profile-name" class="profile-value">-</div>
+            </div>
+            <div class="profile-field">
+              <label>Email:</label>
+              <div id="profile-email" class="profile-value">-</div>
+            </div>
+            <div class="profile-field">
+              <label>Роль:</label>
+              <div id="profile-role" class="profile-value">-</div>
+            </div>
           </div>
+          <button id="profile-logout" class="logout-btn">Выход</button>
         </div>
-
-        <!-- chat overlay (separate window) - moved out to be a direct child of .app -->
       </section>
-    </main>
     </main>
 
     <main class="content" id="view-product" data-view style="display:none">
@@ -161,24 +173,11 @@
         <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M3 7h18v13H3z"/><path d="M3 7l9-4 9 4"/></svg>
         <span>Главная</span>
       </button>
-      <button class="tab" data-tab="view-chats" aria-label="Чаты">
-        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Чаты</span>
+      <button class="tab" data-tab="view-profile" aria-label="Профиль">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
       </button>
     </nav>
-    <!-- chat overlay (separate window) - direct child of .app so it stays visible when others are hidden -->
-    <div class="chat-view" id="chat-view" style="display:none">
-      <div class="chat-top">
-        <button id="chat-back" class="circle-back">‹</button>
-        <div class="chat-title-pill" id="chat-title">Чат</div>
-        <button id="chat-delete" class="del-pill" title="Удалить чат">Удалить чат</button>
-      </div>
-      <div class="messages" id="messages"></div>
-      <div class="composer">
-        <input id="message-input" placeholder="Введите сообщение" />
-        <button id="send-message" class="send-circle">➤</button>
-      </div>
-    </div>
   </div>
 
   <script src="script.js"></script>

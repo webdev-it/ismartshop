@@ -2,7 +2,6 @@
 (function(){
   const PRODUCTS_KEY = 'admin_products_v1';
   const CATS_KEY = 'admin_cats_v1';
-  const THREAD_KEY = 'ismart_threads_v1'; // shared with frontend chat
   const USERS_KEY = 'ismart_users_v1';
 
   // API base and helper (credentials included)
@@ -55,12 +54,7 @@
 
   function saveCategoriesLocally(cats){ localStorage.setItem(CATS_KEY, JSON.stringify(cats)); }
 
-  async function loadThreads(){
-    const api = await tryApi('GET','/api/admin/threads');
-    if(api) return api;
-    try{ return JSON.parse(localStorage.getItem(THREAD_KEY) || '{}'); }catch(e){ return {}; }
-  }
-  function saveThreads(t){ localStorage.setItem(THREAD_KEY, JSON.stringify(t)); }
+  // Chat system removed - was: loadThreads, saveThreads functions
 
   async function loadUsers(){
     // prefer admin stats endpoint; but keep local fallback
@@ -80,10 +74,8 @@
   async function renderDashboard(){
     const users = loadUsers();
     const products = await loadProducts();
-    const threads = loadThreads();
     $('#stat-users').textContent = users.length;
     $('#stat-products').textContent = products.length;
-    $('#stat-threads').textContent = Object.keys(threads).length;
   }
 
   // --- Auth helpers ---
@@ -158,7 +150,6 @@
     await renderDashboard();
     await renderProducts();
     await renderCategories();
-    renderThreads();
     const h = await tryApi('GET','/api/health'); $('#admin-status-text').textContent = h? 'online' : 'offline';
   }
 
@@ -318,101 +309,24 @@
     });
   }
 
-  // Chat rendering
-  function renderThreads(){
-    const raw = loadThreads(); const container = $('#chat-threads'); container.innerHTML='';
-    console.log('[Admin] renderThreads got raw threads:', Array.isArray(raw) ? raw.length : Object.keys(raw || {}).length);
-    // support both API array response and local object map
-    if(!raw || (Array.isArray(raw) && raw.length === 0) || (typeof raw === 'object' && Object.keys(raw).length === 0)){
-      container.innerHTML = '<p>Пока нет чатов.</p>'; $('#chat-messages').innerHTML=''; return;
-    }
-    if(Array.isArray(raw)){
-      // API returned array of threads
-      raw.slice().reverse().forEach(t => {
-        const last = (t.messages && t.messages.length) ? t.messages[t.messages.length-1] : null;
-        const meta = t.user ? `${t.user.email || ''}${t.user.name ? ' ('+t.user.name+')' : ''}` : '';
-        const el = document.createElement('div'); el.className='thread-item'; el.innerHTML = `<strong>${escapeHtml(t.title || ('Товар ' + t.id))}</strong><div class="muted">${last? escapeHtml(last.text.slice(0,80)): ''}</div><div class="muted small">${escapeHtml(meta)}</div>`;
-        el.addEventListener('click', ()=> openThread(t.id)); container.appendChild(el);
-      });
-      return;
-    }
-    // local object map (fallback)
-    const ids = Object.keys(raw).reverse();
-    ids.forEach(id=>{
-      const thread = raw[id]; const last = thread[thread.length-1];
-      const el = document.createElement('div'); el.className='thread-item'; el.innerHTML = `<strong>${thread.title || ('Товар ' + id)}</strong><div class="muted">${last? last.text.slice(0,80): ''}</div>`;
-      el.addEventListener('click', ()=> openThread(id)); container.appendChild(el);
-    });
-  }
-
-  function openThread(id){
-    const raw = loadThreads(); let thread = null; let threadMeta = null;
-    if(Array.isArray(raw)){
-      // API shape
-      thread = (raw.find(t=> String(t.id) === String(id)) || {}).messages || [];
-      threadMeta = (raw.find(t=> String(t.id) === String(id)) || {}).user || null;
-    } else {
-      thread = raw[id] || [];
-    }
-    const messagesEl = $('#chat-messages'); messagesEl.innerHTML = '';
-    // show header with user email/name when available
-    const header = $('#chat-thread-header'); if(header){ header.textContent = threadMeta ? (threadMeta.email || (threadMeta.name || '')) : (`Чат ${id}`); }
-    thread.forEach(m=>{
-      const d = document.createElement('div'); d.className = 'msg ' + (m.from==='user' ? 'user' : 'admin');
-      if(m.from === 'user'){
-        const who = (m.userEmail || m.userEmail === '') ? (m.userEmail || '') : (m.userName ? m.userName : 'Пользователь');
-        d.textContent = `${who}: ${m.text}`;
-      } else {
-        d.textContent = `Админ: ${m.text}`;
-      }
-      messagesEl.appendChild(d);
-    });
-    // attach send handler
-    $('#chat-send').onclick = ()=>{
-      const input = $('#chat-input'); const text = input.value.trim(); if(!text) return;
-      (async ()=>{
-        // Try to POST to API (admin endpoint). If API not reachable, fall back to local update.
-        const apiRes = await tryApi('POST', `/api/threads/${id}/messages`, { text });
-        if(apiRes){
-          // If API succeeded, refresh threads listing from API
-          try{ const refreshed = await tryApi('GET','/api/admin/threads'); if(refreshed){ saveThreads(refreshed); renderThreads(); openThread(id); } }
-          catch(e){}
-        } else {
-          const msg = { from:'admin', text, at: Date.now() };
-          thread.push(msg); threads[id] = thread; saveThreads(threads); openThread(id); renderThreads();
-        }
-        input.value='';
-      })();
-    };
-  }
+  // Chat rendering removed
 
   // Utils
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   // Navigation
-  let chatPollingInterval = null;
   function showView(name){
     $all('.admin-view').forEach(v=> v.classList.add('hidden'));
     const el = document.getElementById('view-'+name); if(el) el.classList.remove('hidden');
     $all('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
-    // Start polling for chats when entering chats view
-    if(name === 'chats'){
-      if(chatPollingInterval) clearInterval(chatPollingInterval);
-      chatPollingInterval = setInterval(async () => {
-        await renderThreads();
-      }, 5000); // poll every 5 seconds
-    } else {
-      if(chatPollingInterval) clearInterval(chatPollingInterval);
-      chatPollingInterval = null;
-    }
   }
 
 
   // Init
   async function init(){
     // wire nav
-    $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='chats') renderThreads(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
-    $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); renderThreads(); loadAdminDBInfo(); loadAdminUsers(); });
+    $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
+    $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); loadAdminDBInfo(); loadAdminUsers(); });
     $('#btn-new-product').addEventListener('click', ()=> openProductForm());
     $('#btn-new-category').addEventListener('click', ()=> openCategoryForm());
     $('#admin-logout')?.addEventListener('click', ()=> doLogout());

@@ -95,18 +95,23 @@ async function fetchCategories(){
   }
 }
 
-// --- Chat / threads storage (localStorage) ---
-const THREAD_KEY = 'ismart_threads_v1';
-function loadThreads(){
-  try{ return JSON.parse(localStorage.getItem(THREAD_KEY) || '{}'); }catch(e){return {}}
+// Fetch app config (Telegram contact, etc)
+async function fetchConfig(){
+  try{
+    const res = await apiFetch('/api/config');
+    if(!res.ok) return;
+    const config = await res.json();
+    if(config.telegramContact){
+      window.TELEGRAM_CONTACT = config.telegramContact;
+    }
+  }catch(e){
+    // config fetch failed, TELEGRAM_CONTACT will be undefined
+    console.log('Config fetch failed:', e && e.message);
+  }
 }
-function saveThreads(t){ localStorage.setItem(THREAD_KEY, JSON.stringify(t)); }
-function getThread(productId){ const t = loadThreads(); return t[productId] || []; }
-function appendMessage(productId, msg){ const t = loadThreads(); t[productId] = t[productId] || []; t[productId].push(msg); saveThreads(t); }
 
-// Map of productId -> threadId persisted inside threads JSON as meta: threads[productId].__threadId
-function saveThreadIdForProduct(productId, threadId){ const t = loadThreads(); t[productId] = t[productId] || []; t[productId].__threadId = threadId; saveThreads(t); }
-function getThreadIdForProduct(productId){ const t = loadThreads(); return (t[productId] && t[productId].__threadId) || null; }
+// --- Chat / threads storage (localStorage) ---
+// REMOVED: Chat system completely removed, replaced with Telegram redirect
 
 // UI helpers for SPA tabs
 function showView(id){
@@ -122,131 +127,9 @@ function showView(id){
   if(searchRow) searchRow.style.display = (id === 'view-home' ? '' : 'none');
 }
 
-// render chat list from products
-function renderChatList(products){
-  const el = document.getElementById('chat-list');
-  el.innerHTML = '';
-  const threads = loadThreads();
-  const ids = Object.keys(threads).reverse();
-  if(ids.length === 0){ el.innerHTML = '<p style="padding:16px;color:#666">У вас ещё нет чатов. Нажмите «Купить» на карточке, чтобы начать чат с админом.</p>'; return; }
-  ids.forEach(pid=>{
-    const p = productsCache.find(x=>x.id === pid) || {id:pid,title:'Товар',price:'',image:''};
-    const item = document.createElement('div');
-    item.className = 'chat-item';
-    item.innerHTML = `
-      <div class="price">${p.price || ''}</div>
-      <div class="name">${p.title}</div>
-    `;
-    item.addEventListener('click', ()=> openChat(p.id));
-    el.appendChild(item);
-  });
-}
-
 let productsCache = [];
 let categoriesCache = [];
-let currentChatId = null;
 let currentProductId = null;
-// polling for user chat updates when chat view is open
-let userChatPollingInterval = null;
-const USER_CHAT_POLL_MS = 4000;
-
-// Open chat view for productId
-function openChat(productId, prefillMessage){
-  showView('view-chats');
-  currentChatId = productId;
-  // show chat-view area
-  document.getElementById('chat-view').style.display = '';
-  // find product
-  const p = productsCache.find(x=>x.id === productId) || {title:'Продукт'};
-  document.getElementById('chat-title').textContent = p.title;
-  const messagesEl = document.getElementById('messages');
-  messagesEl.innerHTML = '';
-  const thread = getThread(productId);
-  thread.forEach(msg =>{
-    const d = document.createElement('div'); d.className = 'msg ' + (msg.from === 'user' ? 'user' : 'admin'); d.textContent = msg.text; messagesEl.appendChild(d);
-  });
-  // scroll to bottom
-  setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 50);
-  // prefill composer
-  const input = document.getElementById('message-input');
-  input.value = prefillMessage || `Здравствуйте! Я бы хотел купить ${p.title} .`;
-  input.focus();
-  // mark app as chat-open so everything else is hidden via CSS
-  document.querySelector('.app')?.classList.add('chat-open');
-  // bind send
-  const sendBtn = document.getElementById('send-message');
-  sendBtn.onclick = async ()=>{
-    const text = input.value.trim(); if(!text) return;
-    const user = loadUser();
-    // Append locally immediately for snappy UI
-    const localMsg = {from:'user', text, at: Date.now()};
-    appendMessage(productId, localMsg);
-    const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; messagesEl.appendChild(d);
-    input.value = '';
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = text.slice(0,60);
-
-    try{
-      const me = await checkCurrentUser();
-      // If no thread exists on server for this product, create it and post initial message.
-      // Allow creating the initial thread even for unauthenticated users (server accepts userId null).
-      let threadId = getThreadIdForProduct(productId);
-      if(!threadId){
-        const body = { productId, text };
-        if(me && me.id){ body.userId = me.id; body.userName = me.name || 'Пользователь'; }
-        console.log('[Client] Creating server thread', { productId, preview: text.slice(0,80), userId: body.userId || null });
-        const resp = await apiFetch('/api/threads', { method: 'POST', body });
-        if(resp){ console.log('[Client] POST /api/threads status', resp.status); }
-        if(resp && resp.ok){ const j = await resp.json().catch(()=>null); console.log('[Client] POST /api/threads response', j); if(j && j.threadId){ threadId = j.threadId; saveThreadIdForProduct(productId, threadId); } }
-        else { console.warn('[Client] Creating thread failed or unauthenticated; continuing with local cache'); }
-      } else {
-        // post message to existing thread; this endpoint requires authentication, so attempt and fall back to local cache on failure
-        try{
-          const resp2 = await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, { method: 'POST', body: { text } });
-          if(resp2){ console.log('[Client] POST /api/threads/:id/messages status', resp2.status); }
-        }catch(e){ console.error('[Client] Error posting message to server thread', e && e.message); }
-      }
-      // Fetch fresh messages for this thread (so admin replies are synced) and update local cache/UI
-      if(threadId){
-        const fresh = await fetchAndStoreThread(threadId, productId);
-        if(fresh && fresh.length){
-          // re-render messages area
-          messagesEl.innerHTML = '';
-          for(const m of fresh){ const elmsg = document.createElement('div'); elmsg.className = 'msg ' + (m.from === 'user' ? 'user' : 'admin'); elmsg.textContent = m.text; messagesEl.appendChild(elmsg); }
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-      }
-    }catch(e){ console.log('Server message send failed (local cache still works):', e && e.message); }
-  };
-
-  // start polling for incoming messages for this product/thread
-  try{ if(userChatPollingInterval) clearInterval(userChatPollingInterval);
-    userChatPollingInterval = setInterval(async ()=>{
-      try{
-        const threadId = getThreadIdForProduct(productId);
-        if(!threadId) return; // nothing on server yet
-        const fresh = await fetchAndStoreThread(threadId, productId);
-        if(fresh && fresh.length){
-          messagesEl.innerHTML = '';
-          for(const m of fresh){ const elmsg = document.createElement('div'); elmsg.className = 'msg ' + (m.from === 'user' ? 'user' : 'admin'); elmsg.textContent = m.text; messagesEl.appendChild(elmsg); }
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-          // update thread preview in list
-          const lastEl = document.getElementById(`last-${productId}`); if(lastEl) lastEl.textContent = fresh[fresh.length-1].text.slice(0,60);
-        }
-      }catch(e){}
-    }, USER_CHAT_POLL_MS);
-  }catch(e){}
-}
-
-// chat delete from header
-document.getElementById('chat-delete').addEventListener('click', ()=>{
-  if(!currentChatId) return;
-  if(confirm('Удалить этот чат?')){ deleteThread(currentChatId); renderChatList(productsCache); document.getElementById('chat-view').style.display = 'none'; try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){} }
-});
-// ensure chat-open class removed when chat deleted
-document.getElementById('chat-delete')?.addEventListener('click', ()=>{ document.querySelector('.app')?.classList.remove('chat-open'); try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){} });
-
-function deleteThread(productId){ const t = loadThreads(); if(t[productId]){ delete t[productId]; saveThreads(t); } }
 
 // Product detail view
 function showProduct(productId){
@@ -268,8 +151,8 @@ function showProduct(productId){
       В избранные
     `;
   }
-  // buy button binds to open chat with prefilled message
-  const pbuy = document.getElementById('product-buy'); if(pbuy){ pbuy.onclick = ()=> openChat(productId, `Здравствуйте! Я бы хотел купить ${p.title} .`); }
+  // buy button redirects to Telegram
+  const pbuy = document.getElementById('product-buy'); if(pbuy){ pbuy.onclick = ()=> { if(window.TELEGRAM_CONTACT) window.open(window.TELEGRAM_CONTACT, '_blank'); else alert('Telegram контакт не установлен'); } }
 }
 
 // bind product detail controls (close, fav)
@@ -292,21 +175,12 @@ document.getElementById('product-fav')?.addEventListener('click', (e)=>{
   if(activeView === 'view-favorites') renderFavorites(productsCache);
 });
 
-// go back to chat list
-document.addEventListener('click', (e)=>{
-  if(e.target && e.target.id === 'chat-back'){
-    document.getElementById('chat-view').style.display = 'none';
-    document.querySelector('.app')?.classList.remove('chat-open');
-    try{ if(userChatPollingInterval){ clearInterval(userChatPollingInterval); userChatPollingInterval = null; } }catch(e){}
-  }
-});
-
 // attach tab buttons
 function setupTabs(products){
   document.querySelectorAll('.tab').forEach(b=>{
     b.addEventListener('click', ()=>{
       const target = b.dataset.tab; if(target) showView(target);
-      if(target === 'view-chats') renderChatList(products);
+      if(target === 'view-profile') renderProfile();
       if(target === 'view-favorites') renderFavorites(products);
     });
   });
@@ -317,10 +191,8 @@ function attachBuyHandlers(){
   document.querySelectorAll('.buy').forEach(btn=>{
     btn.onclick = (ev)=>{
       ev.stopPropagation();
-      const card = ev.target.closest('.card');
-      if(!card) return;
-      const id = card.dataset.id;
-      if(id) openChat(id);
+      if(window.TELEGRAM_CONTACT) window.open(window.TELEGRAM_CONTACT, '_blank');
+      else alert('Telegram контакт не установлен');
     };
   });
 }
@@ -368,56 +240,6 @@ async function migrateLocalFavsToServer(){
     // after migration, refresh server favorites into local cache
     await syncFavsFromServer();
   }catch(e){}
-}
-
-// Sync threads/messages for the logged-in user from server into local thread store
-async function syncThreadsFromServer(){
-  try{
-    const me = await checkCurrentUser(); if(!me) return;
-    const res = await apiFetch('/api/threads'); if(!res || !res.ok) return;
-    const threads = await res.json();
-    const local = loadThreads();
-    for(const t of threads){
-      try{
-        const tid = t.id || t.threadId || t.id;
-        const productId = t.productId || t.product_id || t.product_id || t.productId;
-        if(!tid) continue;
-        const msgsRes = await apiFetch(`/api/threads/${encodeURIComponent(tid)}/messages`);
-        if(!msgsRes || !msgsRes.ok) continue;
-        const msgs = await msgsRes.json();
-        if(productId){
-          // normalize message shape to {from,text,at,userId}
-          local[productId] = msgs.map(m=>({ from: m.from_role || m.from || (m.fromRole||'user'), text: m.text || m.message || '', at: m.created_at || m.at || Date.now(), userId: m.user_id || m.userId || null }));
-          local[productId].__threadId = tid;
-        } else {
-          // store under tid key when productId unknown
-          local[tid] = msgs.map(m=>({ from: m.from_role || m.from || 'user', text: m.text || '', at: m.created_at || m.at || Date.now(), userId: m.user_id || null }));
-          local[tid].__threadId = tid;
-        }
-      }catch(e){}
-    }
-    saveThreads(local);
-  }catch(e){ /* ignore */ }
-}
-
-// Fetch messages for a server thread and store in local threads cache (normalize shape)
-async function fetchAndStoreThread(threadId, productId){
-  try{
-    const msgsRes = await apiFetch(`/api/threads/${encodeURIComponent(threadId)}/messages`);
-    if(!msgsRes || !msgsRes.ok) return;
-    const msgs = await msgsRes.json();
-    const local = loadThreads();
-    const normalized = msgs.map(m=> ({ from: m.from || m.from_role || m.fromRole || 'user', text: m.text || '', at: m.createdAt || m.created_at || m.at || Date.now(), userId: m.user_id || m.userId || null, userEmail: m.userEmail || m.user_email || null, userName: m.userName || m.user_name || null }));
-    if(productId){
-      local[productId] = normalized;
-      local[productId].__threadId = threadId;
-    } else {
-      local[threadId] = normalized;
-      local[threadId].__threadId = threadId;
-    }
-    saveThreads(local);
-    return normalized;
-  }catch(e){ return null; }
 }
 
 // Toggle favorite and attempt server update if authenticated
@@ -872,7 +694,7 @@ function initLogin() {
       // (reloading can re-trigger auth checks that depend on cookies/localStorage timing)
       try{ window.ISMART_LOGGED_IN = true; }catch(e){}
       // Optionally refresh parts of the UI that depend on auth (best-effort)
-      try{ const currentUser = await checkCurrentUser(); if(currentUser) { console.log('User after login:', currentUser.email); try{ await migrateLocalFavsToServer(); await syncFavsFromServer(); renderFavorites(productsCache); }catch(e){} try{ await syncThreadsFromServer(); renderChatList(productsCache); }catch(e){} } }catch(e){}
+      try{ const currentUser = await checkCurrentUser(); if(currentUser) { console.log('User after login:', currentUser.email); try{ await migrateLocalFavsToServer(); await syncFavsFromServer(); renderFavorites(productsCache); }catch(e){} } }catch(e){}
     } catch (err) {
       console.error('Login error:', err);
       alert('Ошибка входа: ' + err.message);
@@ -916,6 +738,43 @@ function renderFavorites(products){
   });
   attachBuyHandlers(); attachFavoriteHandlers();
   attachCardHandlers();
+}
+
+// Render user profile
+async function renderProfile(){
+  const el = document.getElementById('profile-content');
+  if(!el) return;
+  
+  try{
+    const user = await checkCurrentUser();
+    if(!user){
+      el.innerHTML = '<p style="padding:16px;color:#666">Пожалуйста, войдите в аккаунт.</p>';
+      return;
+    }
+    
+    // Display user info
+    const nameEl = document.getElementById('profile-name');
+    const emailEl = document.getElementById('profile-email');
+    const roleEl = document.getElementById('profile-role');
+    
+    if(nameEl) nameEl.textContent = user.name || 'Не указано';
+    if(emailEl) emailEl.textContent = user.email || 'Не указано';
+    if(roleEl) roleEl.textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
+    
+    // Setup logout button
+    const logoutBtn = document.getElementById('profile-logout');
+    if(logoutBtn){
+      logoutBtn.onclick = ()=>{
+        if(confirm('Вы уверены что хотите выйти?')){
+          clearUser();
+          location.reload();
+        }
+      };
+    }
+  }catch(e){
+    el.innerHTML = '<p style="padding:16px;color:#f66">Ошибка загрузки профиля.</p>';
+    console.error('Profile render error:', e);
+  }
 }
 
 function renderProducts(products){
@@ -1128,6 +987,9 @@ onReady(async function(){
   // initialize theme early to avoid flash
   setupThemeOnLoad();
   
+  // fetch app config (Telegram contact, etc)
+  await fetchConfig();
+  
   // sanitize images to avoid requests to unexpected paths like '/po'
   (function sanitizeImages(){
     const placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
@@ -1159,10 +1021,9 @@ onReady(async function(){
     showAuthModal('register');
   } else {
     console.log('User already logged in:', currentUser.email);
-    // sync server-side favorites and threads into local cache so UI reflects account data
+    // sync server-side favorites into local cache so UI reflects account data
     try{ await migrateLocalFavsToServer(); }catch(e){}
     try{ await syncFavsFromServer(); }catch(e){}
-    try{ await syncThreadsFromServer(); }catch(e){}
   }
 
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
@@ -1172,6 +1033,5 @@ onReady(async function(){
   renderProducts(products);
   setupCarousel();
   setupTabs(products);
-  renderChatList(products);
   attachBuyHandlers();
 });
