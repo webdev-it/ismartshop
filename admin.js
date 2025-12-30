@@ -72,7 +72,16 @@
 
   // Rendering
   async function renderDashboard(){
-    const users = loadUsers();
+    // Получаем пользователей из API (как в разделе БД)
+    let users = [];
+    try {
+      const res = await apiFetch('/api/admin/db/users?limit=500');
+      if(res.ok) users = await res.json();
+    } catch(e) {}
+    if(!users || !users.length) {
+      // fallback на старый способ
+      try { users = await loadUsers(); } catch(e) { users = []; }
+    }
     const products = await loadProducts();
     $('#stat-users').textContent = users.length;
     $('#stat-products').textContent = products.length;
