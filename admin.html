@@ -29,10 +29,30 @@
           <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
         </div>
         <nav role="navigation" aria-label="Главная навигация" class="admin-top-nav">
-          <button class="nav-btn" data-view="dashboard">Статистика</button>
-          <button class="nav-btn" data-view="products">Товары</button>
-          <button class="nav-btn" data-view="categories">Категории</button>
-          <button class="nav-btn" data-view="database">База данных</button>
+          <button class="nav-btn" data-view="dashboard">
+            <span class="icon" aria-hidden="true"> 
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z" fill="#0B1727"/></svg>
+            </span>
+            <span class="label">Статистика</span>
+          </button>
+          <button class="nav-btn" data-view="products">
+            <span class="icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7h18v12H3zM7 3h10v4H7z" fill="#0B1727"/></svg>
+            </span>
+            <span class="label">Товары</span>
+          </button>
+          <button class="nav-btn" data-view="categories">
+            <span class="icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v4H3zM3 14h18v4H3z" fill="#0B1727"/></svg>
+            </span>
+            <span class="label">Категории</span>
+          </button>
+          <button class="nav-btn db-btn" data-view="database">
+            <span class="icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C7.6 2 4 3.8 4 6v12c0 2.2 3.6 4 8 4s8-1.8 8-4V6c0-2.2-3.6-4-8-4z" fill="#081218"/></svg>
+            </span>
+            <span class="label">База данных</span>
+          </button>
         </nav>
         <div class="admin-actions">
           <button id="btn-refresh" class="btn-ghost" aria-label="Обновить данные">Обновить</button>

@@ -62,23 +62,35 @@ form input:focus, textarea:focus, select:focus{box-shadow:0 6px 20px rgba(79,156
 
 /* Top navigation design (pill buttons) */
 .admin-top-nav{display:flex;gap:12px;align-items:center}
-.admin-top-nav .nav-btn{background:#eef3fb;color:#0b1724;padding:14px 22px;border-radius:12px;box-shadow:0 8px 16px rgba(11,23,36,0.06);font-weight:700;border:0}
-.admin-top-nav .nav-btn:hover{transform:translateY(-2px)}
-.admin-top-nav .nav-btn.active{background:#d7dbe3;color:#0b1724;box-shadow:inset 0 -6px 18px rgba(0,0,0,0.06)}
-.admin-top-nav .nav-btn[data-view="database"]{background:#ff8a00;color:#081218;border-radius:10px;padding:14px 26px;font-weight:800;box-shadow:0 8px 20px rgba(255,138,0,0.14);text-transform:uppercase;letter-spacing:1px}
+.admin-top-nav{display:flex;gap:12px;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 0}
+.admin-top-nav .nav-btn{display:inline-flex;align-items:center;gap:10px;background:#ffffff;color:var(--text);padding:10px 14px;border-radius:12px;box-shadow:0 6px 18px rgba(11,23,36,0.06);font-weight:700;border:0;min-height:48px}
+.admin-top-nav .nav-btn .icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;flex:0 0 20px}
+.admin-top-nav .nav-btn .label{display:inline-block}
+.admin-top-nav .nav-btn:hover{transform:translateY(-3px)}
+.admin-top-nav .nav-btn.active{background:#f1f5fb;color:var(--text);box-shadow:inset 0 -6px 18px rgba(11,23,36,0.04)}
+.admin-top-nav .nav-btn.db-btn{background:var(--accent);color:#081218;padding:12px 20px;border-radius:10px;font-weight:800;box-shadow:0 12px 30px rgba(255,138,0,0.12);text-transform:uppercase;letter-spacing:0.8px}
+
+/* make nav nicely scrollable on small screens */
+.admin-top-nav::-webkit-scrollbar{height:8px}
+.admin-top-nav::-webkit-scrollbar-thumb{background:rgba(11,23,36,0.06);border-radius:4px}
 
 /* Big header watermark */
-.admin-main::before{content:'ADMIN';position:absolute;right:48px;top:18px;font-size:48px;color:rgba(11,50,100,0.06);font-weight:800;pointer-events:none}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.brand{font-size:28px;font-weight:800;color:var(--text);letter-spacing:2px}
 
 /* Panel inner card look for left content */
-.panel-right{background:linear-gradient(180deg,#eef6ff, #e9f0ff);border-radius:22px;padding:28px;box-shadow:0 18px 40px rgba(2,8,30,0.06);border:1px solid rgba(11,50,100,0.04)}
-.panel-right h3, .panel-right .muted{color:#0b1724}
-.panel-right .form-section{background:rgba(11,50,100,0.04);padding:20px;border-radius:20px}
-.panel-right input, .panel-right textarea{border-radius:32px;background:#e6eaf6;padding:14px}
+.panel-right{background:linear-gradient(180deg,#ffffff, #f7fbff);border-radius:18px;padding:20px;box-shadow:0 14px 30px rgba(11,23,36,0.04);border:1px solid rgba(11,23,36,0.04)}
+.panel-right h3, .panel-right .muted{color:var(--text)}
+.panel-right .form-section{background:#eef4ff;padding:16px;border-radius:14px}
+.panel-right input, .panel-right textarea{border-radius:24px;background:#f0f4fb;padding:12px;border:1px solid rgba(11,23,36,0.04)}
 
 /* Statistic cards style (rounded pale-blue inner) */
-.cards .card{background:transparent;border-radius:18px;padding:18px}
-.cards .card .card-value{background:#eaf1ff;color:#081218;padding:22px;border-radius:18px;font-size:32px;display:inline-block;min-width:110px;text-align:center}
+.cards .card{background:transparent;border-radius:18px;padding:12px}
+.cards .card .card-value{background:#eef4ff;color:var(--text);padding:22px;border-radius:16px;font-size:28px;display:inline-block;min-width:110px;text-align:center}
+
+/* Tighter spacing and mobile-first layout */
+.admin-panel-row{display:flex;flex-direction:column;gap:18px}
+.panel-left, .panel-right{width:100%}
 
 /* Database / SQL box */
 #db-sql{background:#071022;color:var(--muted);border-radius:10px}
@@ -103,17 +115,18 @@ button{cursor:pointer}
 
 /* Responsive */
 @media (max-width:980px){
-  .admin-app{padding:12px;flex-direction:column}
-  .admin-sidebar{order:2;width:100%;display:flex;flex-direction:row;gap:8px;padding:10px}
-  .admin-main{order:1}
+  .admin-app{padding:10px}
+  .admin-top-nav{gap:10px}
+  .brand{font-size:34px}
   .admin-panel-row{flex-direction:column}
 }
 
 @media (max-width:520px){
-  .admin-logo{font-size:16px}
+  .brand{font-size:32px}
+  .admin-top-nav .nav-btn{padding:12px 10px;font-size:15px}
   .card .image{height:120px}
   #image-preview{width:160px;height:160px}
-  form input, textarea{padding:8px}
+  form input, textarea{padding:10px}
 }
 
 /* Transitions and theme support */
