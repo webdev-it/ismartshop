@@ -1,3 +1,22 @@
+/* Блокировка навигации и действий до входа */
+.admin-top-nav.disabled, .admin-actions.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(0.2);
+}
+.admin-top-nav.disabled .nav-btn, .admin-actions.disabled button {
+  cursor: not-allowed !important;
+}
+
+/* Мобильная и современная форма входа */
+.admin-login-modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(240,248,255,0.98);display:flex;align-items:center;justify-content:center}
+.admin-login-modal.hidden{display:none}
+.admin-login-card{background:#fff;padding:24px 14px 18px 14px;border-radius:18px;box-shadow:0 8px 32px rgba(11,23,36,0.10);min-width:0;max-width:96vw;width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
+.admin-login-card h3{margin-top:0;font-size:20px;font-weight:800;letter-spacing:1px;color:var(--text);margin-bottom:10px}
+.admin-login-card .form-row{margin-bottom:10px}
+.admin-login-card input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #dbeafe;font-size:16px;margin-top:6px}
+.admin-login-card button{margin-top:8px;width:100%;padding:13px 0;font-size:17px;border-radius:10px;background:linear-gradient(90deg,#ff8a00 60%,#6fb8ff 100%);color:#fff;font-weight:700;border:none;box-shadow:0 2px 8px rgba(11,23,36,0.08);cursor:pointer;transition:background 0.2s}
+.admin-login-card button:disabled{opacity:0.6;cursor:not-allowed}
 /* admin.css — Minimalist, powerful admin UI
    Responsive, modern, subtle animations and clear information hierarchy
 */

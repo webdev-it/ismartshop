@@ -142,6 +142,19 @@
     const m = document.getElementById('admin-login-modal');
     if(!m) return;
     m.classList.toggle('hidden', !show);
+    // Блокируем/разблокируем навигацию и действия
+    const nav = document.querySelector('.admin-top-nav');
+    const actions = document.querySelector('.admin-actions');
+    const main = document.querySelector('.admin-main');
+    if(show){
+      if(nav) nav.classList.add('disabled');
+      if(actions) actions.classList.add('disabled');
+      // Скрыть все секции кроме формы входа
+      document.querySelectorAll('.admin-view').forEach(v=>v.classList.add('hidden'));
+    } else {
+      if(nav) nav.classList.remove('disabled');
+      if(actions) actions.classList.remove('disabled');
+    }
   }
 
   async function initAfterAuth(){
@@ -453,21 +466,34 @@
     $('#db-exec-sql')?.addEventListener('click', ()=> doDbExecSql());
     // login modal submit
     const loginBtn = document.getElementById('admin-login-submit');
+    const loginUser = document.getElementById('admin-login-username');
+    const loginPass = document.getElementById('admin-login-pass');
+    function updateLoginBtn(){
+      if(loginBtn && loginUser && loginPass){
+        loginBtn.disabled = !(loginUser.value.trim() && loginPass.value);
+      }
+    }
+    if(loginUser) loginUser.addEventListener('input', updateLoginBtn);
+    if(loginPass) loginPass.addEventListener('input', updateLoginBtn);
+    updateLoginBtn();
     if(loginBtn){
       loginBtn.addEventListener('click', async ()=>{
-        const usernameEl = document.getElementById('admin-login-username');
-        const userVal = usernameEl ? usernameEl.value.trim() : '';
-        const pass = document.getElementById('admin-login-pass').value;
-        // Only attempt admin-login using ADMIN_USER / ADMIN_PASS (no email fallback)
+        if(loginBtn.disabled) return;
+        const userVal = loginUser ? loginUser.value.trim() : '';
+        const pass = loginPass ? loginPass.value : '';
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Вход...';
         const me = await doAdminLogin(userVal, pass);
+        loginBtn.textContent = 'Войти';
+        updateLoginBtn();
         if(me && me.role === 'admin'){
           showLoginModal(false);
           await initAfterAuth();
         } else if(me && me.error){
           const msg = (typeof me.error === 'string') ? me.error : (me.error.message || JSON.stringify(me.error));
-          alert('Login failed: ' + msg);
+          alert('Ошибка входа: ' + msg);
         } else {
-          alert('Login failed or not admin');
+          alert('Ошибка: нет доступа');
         }
       });
     }
