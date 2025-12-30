@@ -75,7 +75,7 @@
     // Получаем пользователей из API (как в разделе БД)
     let users = [];
     try {
-      const res = await apiFetch('/api/admin/db/users?limit=500');
+      const res = await apiFetch('/admin/db/users?limit=500');
       if(res.ok) users = await res.json();
     } catch(e) {}
     if(!users || !users.length) {

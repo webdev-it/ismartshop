@@ -70,7 +70,7 @@ html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-
 #products-list, #categories-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .admin-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.02)}
 .admin-item strong{font-weight:700}
-.admin-item .admin-item-actions button{margin-left:8px}
+.admin-item .admin-item-actions{display:flex;gap:8px}
 
 /* Forms */
 .form-row{margin-bottom:8px}
