@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>iSmartShop — Admin</title>
+  <title>Admin — iSmartShop</title>
   <link rel="stylesheet" href="admin.css">
   <script>
     // Backend API base (deployed on Render)
@@ -22,23 +22,21 @@
         <div class="form-row" style="text-align:right"><button id="admin-login-submit" class="btn-primary" disabled aria-label="Вход в админ-панель">Войти</button></div>
       </div>
     </div>
-    <aside class="admin-sidebar">
-      <div class="admin-footer" style="margin-top:auto;padding:12px"><button id="admin-logout" class="btn-ghost" aria-label="Выйти из админ панели">Выйти</button></div>
-    </aside>
-
     <main class="admin-main">
       <header class="admin-header">
-        <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
+        <div class="brand-row">
+          <div class="brand">ADMIN</div>
+          <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
+        </div>
         <nav role="navigation" aria-label="Главная навигация" class="admin-top-nav">
-          <button class="nav-btn" data-view="dashboard">Панель</button>
+          <button class="nav-btn" data-view="dashboard">Статистика</button>
           <button class="nav-btn" data-view="products">Товары</button>
           <button class="nav-btn" data-view="categories">Категории</button>
-          
           <button class="nav-btn" data-view="database">База данных</button>
         </nav>
         <div class="admin-actions">
           <button id="btn-refresh" class="btn-ghost" aria-label="Обновить данные">Обновить</button>
-          <button id="theme-toggle" class="btn-ghost" role="switch" aria-checked="false" aria-label="Переключить тему">🌗</button>
+          <button id="admin-logout" class="btn-ghost" aria-label="Выйти из админ панели">Выйти</button>
         </div>
       </header>
 
