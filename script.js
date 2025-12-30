@@ -59,6 +59,8 @@ function setupThemeOnLoad(){
 const sampleCategories = [];
 
 let selectedCategory = 'all';
+let currentSearchQuery = '';
+let searchDebounceTimeout = null;
 
 // API base (set `window.ISMART_API_BASE` to full backend URL if needed)
 const API_BASE = window.ISMART_API_BASE || '';
@@ -837,11 +839,18 @@ async function renderProfile(){
   }
 }
 
-function renderProducts(products){
+function renderProducts(products, searchQuery = ''){
   const el = document.getElementById('products');
   el.innerHTML = '';
-  // filter by selected category
-  const filtered = products.filter(p => selectedCategory === 'all' ? true : p.category === selectedCategory);
+  // filter by selected category and search query
+  let filtered = products.filter(p => selectedCategory === 'all' ? true : p.category === selectedCategory);
+  if(searchQuery.trim()){
+    const query = searchQuery.toLowerCase().trim();
+    filtered = filtered.filter(p =>
+      (p.title && p.title.toLowerCase().includes(query)) ||
+      (p.description && p.description.toLowerCase().includes(query))
+    );
+  }
   filtered.forEach((p,i) => {
     const wrap = document.createElement('div');
     wrap.className = 'card-wrap';
@@ -905,9 +914,8 @@ function renderCategories(categories){
       // toggle active class
       document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
       b.classList.add('active');
-      // re-render products (ideally re-fetch from server)
-      const products = await fetchProducts();
-      renderProducts(products);
+      // re-render products with current search
+      renderProducts(productsCache, currentSearchQuery);
     });
     el.appendChild(b);
   });
@@ -1096,4 +1104,16 @@ onReady(async function(){
   setupCarousel();
   setupTabs(products);
   attachBuyHandlers();
+
+  // Setup search functionality
+  const searchInput = document.getElementById('search');
+  if(searchInput){
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchDebounceTimeout);
+      searchDebounceTimeout = setTimeout(() => {
+        currentSearchQuery = e.target.value;
+        renderProducts(productsCache, currentSearchQuery);
+      }, 300); // 300ms debounce
+    });
+  }
 });
