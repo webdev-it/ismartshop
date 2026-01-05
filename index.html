@@ -51,7 +51,7 @@
   </script>
   <!-- JivoSite chat widget -->
   <script src="//code.jivo.ru/widget/Z8QiHSnb6N" async></script>
-  <script src="snow.js"></script>
+  
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8729431037440255"
      crossorigin="anonymous"></script>
 </head>
@@ -199,9 +199,9 @@
         <div class="footer-copy">© <span id="year">2025</span> iSmartShop — Все права защищены.</div>
       </div>
       <div class="footer-right">
-        <a href="/contacts" class="footer-link">Контакты</a>
-        <a href="/terms" class="footer-link">Условия</a>
-        <a href="/privacy" class="footer-link">Политика конфиденциальности</a>
+        <a href="/contacts" class="footer-link" target="_blank">Контакты</a>
+        <a href="/terms" class="footer-link" target="_blank">Условия</a>
+        <a href="/privacy" class="footer-link" target="_blank">Политика конфиденциальности</a>
       </div>
       <div style="height: 180px; width: 100%; clear: both;"></div>
     </div>
@@ -228,49 +228,6 @@
     })();
   </script>
 
-  <!-- Auth modal (login / registration) -->
-  <div class="auth-modal" id="auth-modal" aria-hidden="true" style="display:none">
-    <div class="auth-card">
-      <div class="auth-top">
-        <div class="auth-note">Зарегистрируйтесь или войдите в свой аккаунт чтобы пользоваться сайтом</div>
-      </div>
-      <div class="auth-tabs">
-        <button id="tab-login" class="auth-tab">Войти</button>
-        <button id="tab-register" class="auth-tab">Регистрация</button>
-      </div>
-      <div class="auth-forms">
-        <form id="form-login" class="auth-form" style="display:none" onsubmit="return false">
-          <h2>Войти</h2>
-          <input id="login-email" placeholder="Адрес электронной почты" type="email" />
-          <input id="login-password" placeholder="Пароль" type="password" />
-          <button id="login-submit" class="primary-cta" type="button">Войти</button>
-        </form>
-        <form id="form-register" class="auth-form" style="display:none" onsubmit="return false">
-          <h2>Регистрация</h2>
-          <input id="reg-name" placeholder="Имя" type="text" />
-          <input id="reg-email" placeholder="Адрес электронной почты" type="email" />
-          <input id="reg-password" placeholder="Пароль" type="password" />
-          <input id="reg-password-repeat" placeholder="Повторите пароль" type="password" />
-          <button id="reg-submit" class="primary-cta" type="button">Зарегистрироваться</button>
-        </form>
-      </div>
-    </div>
-  </div>
-  <!-- Verification modal -->
-  <div class="verify-modal" id="verify-modal" aria-hidden="true" style="display:none">
-    <div class="auth-card">
-      <div class="auth-top">
-        <div class="auth-note">Введите код подтверждения из письма</div>
-      </div>
-      <form id="form-verify" class="auth-form" onsubmit="return false">
-        <input id="verify-email" type="email" placeholder="Email" style="margin-bottom:8px" />
-        <input id="verify-code" type="text" placeholder="Код из письма" />
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
-          <button id="verify-resend" class="secondary-cta" type="button">Отправить код ещё раз</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <!-- Authentication removed: user registration/login UI disabled -->
 </body>
 </html>
