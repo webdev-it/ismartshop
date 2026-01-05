@@ -5,7 +5,9 @@
   const USERS_KEY = 'ismart_users_v1';
 
   // API base and helper (credentials included)
-  const API_BASE = window.ISMART_API_BASE || '';
+  // Default to the database backend to avoid same-origin static site serving issues.
+  const API_BASE = (typeof window !== 'undefined' && window.ISMART_API_BASE && window.ISMART_API_BASE.trim()) ? window.ISMART_API_BASE.trim() : 'https://ismartshopdatabase.onrender.com';
+  console.log('[Admin] API_BASE =', API_BASE);
   async function apiFetch(path, opts = {}){
     const url = (path.startsWith('http') || path.startsWith('/')) ? API_BASE + path : API_BASE + '/' + path;
     const init = { credentials: 'include', headers: {}, ...opts };
