@@ -105,8 +105,9 @@
   // admin login using ADMIN_USER/ADMIN_PASS via /auth/admin-login
   async function doAdminLogin(username, pass){
     try{
+      console.log('doAdminLogin: sending admin-login request to', window.ISMART_API_BASE || 'same-origin', 'from', window.location.href);
       const resp = await apiFetch('/auth/admin-login', { method: 'POST', body: { username, password: pass } });
-      console.log('doAdminLogin: admin-login response status=', resp.status);
+      console.log('doAdminLogin: admin-login response status=', resp && resp.status);
       const ct = resp.headers.get('content-type') || '';
       let body = null;
       if(ct.indexOf('application/json') !== -1) {
@@ -114,10 +115,12 @@
         console.log('doAdminLogin: admin-login body=', body);
       }
       if(!resp.ok){
+        console.warn('doAdminLogin: admin-login failed, status', resp.status, 'body', body);
         return { error: body || (`status ${resp.status}`) };
       }
       // on success, try to fetch current user (cookie should be set)
       let me = await tryApi('GET','/auth/me');
+      console.log('doAdminLogin: /auth/me after login ->', me);
       // If cookie-based fetch returned null (sometimes cookies aren't set immediately),
       // retry using the returned token with an Authorization: Bearer header
       if((me === null || me === undefined) && body && body.token){
@@ -130,7 +133,7 @@
           }
         }catch(err){ console.warn('doAdminLogin: bearer retry failed', err); }
       }
-      console.log('doAdminLogin: /auth/me ->', me);
+      console.log('doAdminLogin: final /auth/me ->', me);
       return me;
     }catch(e){
       console.error('admin-login error', e);
