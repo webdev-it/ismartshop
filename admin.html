@@ -1,139 +1,277 @@
 <!doctype html>
+
 <html lang="ru">
+
 <head>
+
   <meta charset="utf-8">
+
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <title>Admin — iSmartShop</title>
+
   <link rel="stylesheet" href="admin.css">
+
   <script>
+
     // Backend API base (deployed on Render)
+
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
+
   </script>
+
 </head>
+
 <body>
+
   
 
+
+
   <div class="admin-app">
+
     <div id="admin-login-modal" class="admin-login-modal hidden">
+
         <div class="admin-login-card">
+
         <h3>Вход в админку</h3>
+
         <div class="form-row"><input id="admin-login-username" placeholder="Логин" aria-label="Логин администратора"/></div>
+
         <div class="form-row"><input id="admin-login-pass" type="password" placeholder="Пароль" aria-label="Пароль администратора"/></div>
+
         <div class="form-row" style="text-align:right"><button id="admin-login-submit" class="btn-primary" disabled aria-label="Вход в админ-панель">Войти</button></div>
+
       </div>
+
     </div>
+
     <main class="admin-main">
+
       <header class="admin-header">
+
         <div class="brand-row">
+
           <div class="brand">ADMIN</div>
+
           <div id="admin-status">Статус: <span id="admin-status-text" aria-live="polite">offline</span></div>
+
         </div>
+
         <nav role="navigation" aria-label="Главная навигация" class="admin-top-nav">
+
           <button class="nav-btn" data-view="dashboard">
+
             <span class="icon" aria-hidden="true"> 
+
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z" fill="#0B1727"/></svg>
+
             </span>
+
             <span class="label">Статистика</span>
+
           </button>
+
           <button class="nav-btn" data-view="products">
+
             <span class="icon" aria-hidden="true">
+
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7h18v12H3zM7 3h10v4H7z" fill="#0B1727"/></svg>
+
             </span>
+
             <span class="label">Товары</span>
+
           </button>
+
           <button class="nav-btn" data-view="categories">
+
             <span class="icon" aria-hidden="true">
+
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v4H3zM3 14h18v4H3z" fill="#0B1727"/></svg>
+
             </span>
+
             <span class="label">Категории</span>
+
           </button>
+
           <button class="nav-btn db-btn" data-view="database">
+
             <span class="icon" aria-hidden="true">
+
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C7.6 2 4 3.8 4 6v12c0 2.2 3.6 4 8 4s8-1.8 8-4V6c0-2.2-3.6-4-8-4z" fill="#081218"/></svg>
+
             </span>
+
             <span class="label">База данных</span>
+
           </button>
+
         </nav>
+
         <div class="admin-actions">
+
           <button id="btn-refresh" class="btn-ghost" aria-label="Обновить данные">Обновить</button>
+
           <button id="admin-logout" class="btn-ghost" aria-label="Выйти из админ панели">Выйти</button>
+
         </div>
+
       </header>
 
+
+
       <section id="view-dashboard" class="admin-view">
+
         <h2>Панель</h2>
+
         <div class="cards">
+
           <div class="card"><div class="card-title">Пользователей</div><div class="card-value" id="stat-users">—</div></div>
+
           <div class="card"><div class="card-title">Товаров</div><div class="card-value" id="stat-products">—</div></div>
+
           <div class="card"><div class="card-title">Чатов</div><div class="card-value" id="stat-threads"><a class="button-chat" href="https://app.jivo.ru">Перейти к чатам</a></div></div>
+
         </div>
+
       </section>
+
+
 
       <section id="view-products" class="admin-view hidden">
+
         <h2>Товары</h2>
+
             <div class="admin-panel-row">
+
           <div class="panel-left">
+
             <button id="btn-new-product" class="btn-primary" aria-label="Добавить товар">Добавить товар</button>
+
             <div id="products-list"></div>
+
           </div>
+
           <div class="panel-right">
+
             <div id="product-form-wrap"></div>
+
           </div>
+
         </div>
+
       </section>
 
+
+
       <section id="view-categories" class="admin-view hidden">
+
         <h2>Категории</h2>
+
         <div class="admin-panel-row">
+
           <div class="panel-left">
+
             <button id="btn-new-category" class="btn-primary" aria-label="Добавить категорию">Добавить категорию</button>
+
             <div id="categories-list"></div>
+
           </div>
+
           <div class="panel-right">
+
             <div id="category-form-wrap"></div>
+
           </div>
+
         </div>
+
       </section>
+
+
 
       
 
+
+
       <section id="view-database" class="admin-view hidden">
+
         <h2>База данных / Хранилище</h2>
+
         <div class="admin-panel-row">
+
           <div class="panel-left">
+
             <div class="card" style="margin-bottom:12px">
+
               <div class="card-title">Информация</div>
+
               <div style="margin-top:8px">DB: <span id="db-info-db">—</span></div>
+
               <div>Users: <span id="db-info-users">—</span></div>
+
               <div>DB Size: <span id="db-info-size">—</span></div>
+
             </div>
 
+
+
             <div class="card">
+
               <div class="card-title">Пользователи</div>
+
               <div style="margin-top:8px"><button id="db-refresh-users" class="btn-ghost">Обновить список</button> <button id="db-truncate-users" class="btn-ghost">Очистить всех</button></div>
+
               <div id="db-users-list" style="margin-top:12px;max-height:360px;overflow:auto"></div>
+
             </div>
+
           </div>
+
+
 
           <div class="panel-right">
+
             <div class="card" style="margin-bottom:12px">
+
               <div class="card-title">Операции</div>
+
               <div style="margin-top:8px;display:flex;gap:8px"><button id="db-backup-json" class="btn-ghost">Сделать бэкап JSON</button><button id="db-vacuum" class="btn-ghost">VACUUM</button></div>
+
             </div>
+
+
 
             <div class="card">
+
               <div class="card-title">Выполнить SQL (Postgres)</div>
+
               <textarea id="db-sql" style="width:100%;height:140px;padding:8px;border-radius:8px;background:var(--frost);border:0;margin-top:8px" aria-label="SQL-запрос"></textarea>
+
               <div style="text-align:right;margin-top:8px"><button id="db-exec-sql" class="btn-primary" aria-label="Выполнить SQL">Выполнить</button></div>
+
               <pre id="db-sql-result" style="margin-top:8px;max-height:240px;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;display:none"></pre>
+
             </div>
+
           </div>
+
         </div>
+
       </section>
+
     </main>
+
   </div>
 
+
+
   <script src="admin.js"></script>
+
   
+
 </body>
+
 </html>
