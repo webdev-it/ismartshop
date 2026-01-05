@@ -797,8 +797,46 @@ function renderFavorites(products){
 async function renderProfile(){
   const el = document.getElementById('profile-content');
   if(!el) return;
-  // User system disabled — show informational message
-  el.innerHTML = '<p style="padding:16px;color:#666">Система пользователей отключена. Профиль недоступен.</p>';
+  
+  try{
+    const user = await checkCurrentUser();
+    if(!user){
+      el.innerHTML = '<p style="padding:16px;color:#666">Пожалуйста, войдите в аккаунт.</p>';
+      return;
+    }
+    
+    // Display user info
+    const nameEl = document.getElementById('profile-name');
+    const emailEl = document.getElementById('profile-email');
+    const roleEl = document.getElementById('profile-role');
+    
+    if(nameEl) nameEl.textContent = user.name || 'Не указано';
+    if(emailEl) emailEl.textContent = user.email || 'Не указано';
+    if(roleEl) roleEl.textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
+    
+    // Setup logout button
+    const logoutBtn = document.getElementById('profile-logout');
+    if(logoutBtn){
+      logoutBtn.onclick = async ()=>{
+        if(confirm('Вы уверены что хотите выйти?')){
+          // Call server logout endpoint to clear session cookie
+          try{
+            await apiFetch('/auth/logout', { method: 'POST' });
+          }catch(e){
+            console.warn('Logout API call failed:', e && e.message);
+          }
+          // Clear local user and favorites
+          clearUser();
+          try{ localStorage.removeItem('ismart_favs_v1'); }catch(e){}
+          // Reload to show login screen
+          location.reload();
+        }
+      };
+    }
+  }catch(e){
+    el.innerHTML = '<p style="padding:16px;color:#f66">Ошибка загрузки профиля.</p>';
+    console.error('Profile render error:', e);
+  }
 }
 
 function renderProducts(products, searchQuery = ''){
@@ -1039,20 +1077,24 @@ onReady(async function(){
     });
   })();
 
-  // Authentication disabled: registration/login removed
-  console.log('Authentication disabled: local-only favorites active');
-async function syncFavsFromServer(){
-  console.log('[Sync Favs] Disabled: using localStorage only');
-}
-async function migrateLocalFavsToServer(){
-  console.log('[Migrate Favs] Disabled: not migrating to server');
-}
-function toggleFavAndSync(id){
-  // Local-only favorites: toggle in localStorage and return
-  const f = loadFavs(); const idx = f.indexOf(id);
-  if(idx >= 0){ f.splice(idx,1); } else { f.push(id); }
-  saveFavs(f);
-}
+  // Initialize auth handlers
+  initAuthTabs();
+  initRegistration();
+  initLogin();
+  initVerification();
+  console.log('Auth handlers initialized');
+  
+  // check if user is already logged in
+  const currentUser = await checkCurrentUser();
+  if(!currentUser) {
+    // Если пользователь не залогинен — сразу показать окно регистрации
+    showAuthModal('register');
+  } else {
+    console.log('User already logged in:', currentUser.email);
+    // sync server-side favorites into local cache so UI reflects account data
+    try{ await migrateLocalFavsToServer(); }catch(e){}
+    try{ await syncFavsFromServer(); }catch(e){}
+  }
 
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
   productsCache = products;
