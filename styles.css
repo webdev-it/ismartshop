@@ -317,7 +317,15 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 .product-image img{width:100%;height:260px;object-fit:cover;display:block}
 .product-body{padding:18px 16px 20px;overflow:auto}
 /* allow body area to scroll when content is large */
-.product-body{max-height:calc(100vh - 420px);}
+.product-body{max-height:calc(100vh - 420px);padding-bottom:96px}
+
+/* Keep action buttons visible: sticky at bottom of scrollable body */
+.product-actions{position:sticky;bottom:0;z-index:160;padding:14px 16px;background:linear-gradient(180deg, rgba(255,255,255,0.00), rgba(255,255,255,0.02));display:flex;gap:12px}
+.theme-dark .product-actions{background:linear-gradient(180deg, rgba(3,8,32,0.00), rgba(3,8,32,0.02));}
+.product-actions .fav-pill, .product-actions .buy-pill{flex:1}
+
+/* ensure sticky actions have slight shadow to separate from content */
+.product-actions{box-shadow:0 -6px 20px rgba(0,0,0,0.12)}
 .product-body{padding:18px 16px 20px}
 .product-price{font-weight:800;font-size:20px;margin-bottom:8px}
 .product-title{font-size:16px;margin-bottom:10px;color:var(--text)}
