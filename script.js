@@ -196,6 +196,18 @@ function showProduct(productId){
       slides.addEventListener('touchend', ()=>{ if(Math.abs(touchDeltaX) > 40){ if(touchDeltaX < 0) index = (index + 1) % imgs.length; else index = (index - 1 + imgs.length) % imgs.length; } touchDeltaX = 0; update(); });
     }
     imgContainer.appendChild(gallery);
+    // Attach keyboard (Escape) and overlay click handlers to ensure modal can be closed
+    try{
+      const vp = document.getElementById('view-product');
+      if(vp){
+        try{ if(__productModalKeyHandler) document.removeEventListener('keydown', __productModalKeyHandler); }catch(e){}
+        try{ if(__productModalOverlayHandler) vp.removeEventListener('click', __productModalOverlayHandler); }catch(e){}
+        __productModalKeyHandler = (ev)=>{ if(ev.key === 'Escape') closeProductModal(); };
+        document.addEventListener('keydown', __productModalKeyHandler);
+        __productModalOverlayHandler = (ev)=>{ if(ev.target === vp) closeProductModal(); };
+        vp.addEventListener('click', __productModalOverlayHandler);
+      }
+    }catch(e){}
   }
   const priceEl = document.getElementById('product-price'); if(priceEl) priceEl.textContent = formatPrice(p.price || '');
   const titleEl = document.getElementById('product-title'); if(titleEl) titleEl.textContent = p.title || '';
@@ -216,7 +228,16 @@ function showProduct(productId){
 }
 
 // bind product detail controls (close, fav)
-document.getElementById('product-close')?.addEventListener('click', ()=>{ showView('view-home'); try{ document.body.style.overflow = ''; }catch(e){} });
+// Centralized close handler for product modal (ensures cleanup)
+let __productModalKeyHandler = null;
+let __productModalOverlayHandler = null;
+function closeProductModal(){
+  showView('view-home');
+  try{ document.body.style.overflow = ''; }catch(e){}
+  try{ if(__productModalKeyHandler) { document.removeEventListener('keydown', __productModalKeyHandler); __productModalKeyHandler = null; } }catch(e){}
+  try{ if(__productModalOverlayHandler){ const vp = document.getElementById('view-product'); vp && vp.removeEventListener('click', __productModalOverlayHandler); __productModalOverlayHandler = null; } }catch(e){}
+}
+document.getElementById('product-close')?.addEventListener('click', (ev)=>{ ev.stopPropagation(); closeProductModal(); });
 document.getElementById('product-fav')?.addEventListener('click', (e)=>{
   e.stopPropagation();
   const id = e.currentTarget.dataset.id; if(!id) return;
