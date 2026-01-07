@@ -372,6 +372,15 @@
     titleLabel.parentNode.insertBefore(createImageSection(), titleLabel.nextSibling);
     
     wrap.appendChild(form);
+
+    // ensure form can be closed with Escape and handlers are cleaned up
+    let __adminFormKeyHandler = null;
+    function closeProductForm(){
+      try{ if(__adminFormKeyHandler) { document.removeEventListener('keydown', __adminFormKeyHandler); __adminFormKeyHandler = null; } }catch(e){}
+      wrap.innerHTML = '';
+    }
+    __adminFormKeyHandler = (ev)=>{ if(ev.key === 'Escape') closeProductForm(); };
+    document.addEventListener('keydown', __adminFormKeyHandler);
     
     // Handle price input - только цифры, автоматически добавляем рубль
     const priceInput = form.querySelector('input[name="price"]');
@@ -386,7 +395,7 @@
       e.target.value = e.target.value.replace(/[^\d]/g, '');
     });
     
-    $('#cancel-product').addEventListener('click', ()=>{ wrap.innerHTML=''; });
+    $('#cancel-product').addEventListener('click', ()=>{ closeProductForm(); });
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const fd = new FormData(form);
@@ -408,7 +417,7 @@
         if(idx>=0) products[idx] = updated; else products.push(updated);
         await saveProductsLocally(products);
       }
-      renderProducts(); renderDashboard(); wrap.innerHTML='';
+      renderProducts(); renderDashboard(); closeProductForm();
     });
   }
 
