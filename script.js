@@ -1087,8 +1087,9 @@ onReady(async function(){
   // check if user is already logged in
   const currentUser = await checkCurrentUser();
   if(!currentUser) {
-    // Если пользователь не залогинен — сразу показать окно регистрации
-    showAuthModal('register');
+    // User not logged in — mandatory registration is suppressed.
+    // To re-enable forced registration, call `showAuthModal('register')` here.
+    console.log('User not logged in: registration modal suppressed');
   } else {
     console.log('User already logged in:', currentUser.email);
     // sync server-side favorites into local cache so UI reflects account data
