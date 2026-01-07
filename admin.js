@@ -201,79 +201,160 @@
   async function openProductForm(id){
     const wrap = $('#product-form-wrap'); wrap.innerHTML = '';
     const products = await loadProducts();
-    const product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', image:'', category:'', description:'', colors:[] };
+    const product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', images:[], category:'', description:'', colors:[] };
     const cats = await loadCategories();
     
-    // Helper: Image uploader and cropper
-    let selectedImageData = product.image; // base64 or URL
+    // Helper: Image uploader and cropper (multi-image)
+    let selectedImages = Array.isArray(product.images) && product.images.length ? product.images.slice() : [];
+
+    // Basic cropper modal: src (dataURL or URL), cb receives cropped dataURL or null
+    function openCropperModal(src, cb){
+      const modal = document.createElement('div');
+      modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0; modal.style.zIndex = 2000; modal.style.background = 'rgba(0,0,0,0.6)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center';
+      const card = document.createElement('div'); card.style.background='#fff'; card.style.padding='12px'; card.style.borderRadius='8px'; card.style.maxWidth='90vw'; card.style.maxHeight='90vh'; card.style.overflow='auto'; card.style.display='flex'; card.style.flexDirection='column'; card.style.gap='8px';
+      const canvas = document.createElement('canvas'); canvas.style.maxWidth='80vw'; canvas.style.maxHeight='70vh'; canvas.style.border='1px solid #ddd'; canvas.style.cursor='crosshair';
+      const info = document.createElement('div'); info.style.fontSize='12px'; info.style.color='#333'; info.textContent='Нарисуйте прямоугольник мышью, затем нажмите "Обрезать".';
+      const btnRow = document.createElement('div'); btnRow.style.display = 'flex'; btnRow.style.gap = '8px'; btnRow.style.justifyContent = 'flex-end';
+      const cancelBtn = document.createElement('button'); cancelBtn.textContent='Отмена';
+      const cropBtn = document.createElement('button'); cropBtn.textContent='Обрезать';
+      btnRow.appendChild(cancelBtn); btnRow.appendChild(cropBtn);
+      card.appendChild(canvas); card.appendChild(info); card.appendChild(btnRow); modal.appendChild(card); document.body.appendChild(modal);
+
+      const ctx = canvas.getContext('2d');
+      const img = new Image(); img.crossOrigin = 'anonymous';
+      let scale = 1;
+      img.onload = ()=>{
+        const maxW = Math.min(window.innerWidth * 0.8, img.width);
+        const maxH = Math.min(window.innerHeight * 0.7, img.height);
+        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        scale = img.width / canvas.width;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+      };
+      img.onerror = ()=>{ alert('Не удалось загрузить изображение для обрезки.'); closeModal(null); };
+      img.src = src;
+
+      // selection
+      let sel = null; let dragging = false; let startX=0, startY=0;
+      function redraw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+        if(sel){
+          ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.clearRect(sel.x, sel.y, sel.w, sel.h);
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(sel.x+1, sel.y+1, sel.w-2, sel.h-2);
+        }
+      }
+      function onMouseMove(e){ if(!dragging) return; const r = canvas.getBoundingClientRect(); const mx = e.clientX - r.left; const my = e.clientY - r.top; sel.x = Math.min(startX, mx); sel.y = Math.min(startY, my); sel.w = Math.abs(mx - startX); sel.h = Math.abs(my - startY); redraw(); }
+      function onMouseUp(e){ if(!dragging) return; dragging = false; if(sel && sel.w>2 && sel.h>2) info.textContent = 'Выделено: ' + Math.round(sel.w*scale) + '×' + Math.round(sel.h*scale) + ' px'; else info.textContent='Нарисуйте прямоугольник мышью, затем нажмите "Обрезать".'; }
+      canvas.addEventListener('mousedown', (e)=>{ const r = canvas.getBoundingClientRect(); startX = e.clientX - r.left; startY = e.clientY - r.top; dragging = true; sel = { x:startX, y:startY, w:1, h:1 }; redraw(); });
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      function closeModal(result){ try{ window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); }catch(e){} modal.remove(); cb && cb(result); }
+
+      cancelBtn.addEventListener('click', ()=> closeModal(null));
+      cropBtn.addEventListener('click', ()=>{
+        if(!sel || sel.w<2 || sel.h<2){ return alert('Пожалуйста, выберите область обрезки.'); }
+        const sx = Math.max(0, Math.round(sel.x * scale));
+        const sy = Math.max(0, Math.round(sel.y * scale));
+        const sw = Math.min(img.width - sx, Math.round(sel.w * scale));
+        const sh = Math.min(img.height - sy, Math.round(sel.h * scale));
+        const out = document.createElement('canvas'); out.width = sw; out.height = sh; const octx = out.getContext('2d');
+        octx.drawImage(img, sx, sy, sw, sh, 0,0, sw, sh);
+        const data = out.toDataURL('image/png');
+        closeModal(data);
+      });
+
+    }
+
     const createImageSection = () => {
       const section = document.createElement('div');
       section.innerHTML = `
-        <label style="display:block;margin-bottom:8px">Изображение<br>
+        <label style="display:block;margin-bottom:8px">Изображения<br>
           <div style="display:flex;gap:8px;margin-top:4px">
-            <input type="file" id="image-upload" accept="image/*" style="flex:1">
-            <button type="button" id="crop-image" ${!selectedImageData ? 'disabled' : ''}>Обрезать</button>
+            <input type="file" id="image-upload" accept="image/*" multiple style="flex:1">
+            <button type="button" id="add-from-url">Добавить по URL</button>
           </div>
         </label>
-        <div id="image-preview" style="margin-top:12px;border-radius:8px;overflow:hidden;${selectedImageData ? `background:url('${selectedImageData}') center/cover;width:200px;height:200px;border:1px solid #ddd` : 'display:none'};"></div>
-        <input type="hidden" name="image" value="${selectedImageData ? selectedImageData.substring(0, 100) + '...' : ''}">
+        <div id="images-list" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"></div>
+        <input type="hidden" name="images" value="">
       `;
-      
+
       const uploadInput = section.querySelector('#image-upload');
-      const cropBtn = section.querySelector('#crop-image');
-      const preview = section.querySelector('#image-preview');
-      const hiddenInput = section.querySelector('input[name="image"]');
-      
+      const imagesList = section.querySelector('#images-list');
+      const hiddenInput = section.querySelector('input[name="images"]');
+
+      function refreshList(){
+        imagesList.innerHTML = '';
+        selectedImages.forEach((src, idx)=>{
+          const thumb = document.createElement('div');
+          thumb.draggable = true;
+          thumb.dataset.index = String(idx);
+          thumb.style.width = '100px'; thumb.style.height = '100px'; thumb.style.border = '1px solid #ddd'; thumb.style.borderRadius='8px'; thumb.style.backgroundSize='cover'; thumb.style.backgroundPosition='center'; thumb.style.position='relative';
+          thumb.style.backgroundImage = `url('${src}')`;
+          const controls = document.createElement('div'); controls.style.position='absolute'; controls.style.right='6px'; controls.style.bottom='6px'; controls.style.display='flex'; controls.style.gap='6px';
+          const cropBtn = document.createElement('button'); cropBtn.textContent='Обрезать'; cropBtn.type='button'; cropBtn.style.fontSize='12px';
+          const leftBtn = document.createElement('button'); leftBtn.textContent='◀'; leftBtn.type='button'; leftBtn.title='Переместить влево'; leftBtn.style.fontSize='12px';
+          const rightBtn = document.createElement('button'); rightBtn.textContent='▶'; rightBtn.type='button'; rightBtn.title='Переместить вправо'; rightBtn.style.fontSize='12px';
+          const delBtn = document.createElement('button'); delBtn.textContent='✖'; delBtn.type='button'; delBtn.style.fontSize='12px'; delBtn.title='Удалить';
+          controls.appendChild(leftBtn); controls.appendChild(rightBtn); controls.appendChild(cropBtn); controls.appendChild(delBtn);
+          thumb.appendChild(controls);
+          imagesList.appendChild(thumb);
+
+          leftBtn.addEventListener('click', ()=>{ if(idx>0){ const a=selectedImages[idx-1]; selectedImages[idx-1]=selectedImages[idx]; selectedImages[idx]=a; refreshList(); } });
+          rightBtn.addEventListener('click', ()=>{ if(idx<selectedImages.length-1){ const a=selectedImages[idx+1]; selectedImages[idx+1]=selectedImages[idx]; selectedImages[idx]=a; refreshList(); } });
+          delBtn.addEventListener('click', ()=>{ if(confirm('Удалить изображение?')){ selectedImages.splice(idx,1); refreshList(); } });
+          cropBtn.addEventListener('click', ()=> openCropperModal(src, (cropped)=>{ if(cropped){ selectedImages[idx]=cropped; refreshList(); } }));
+
+          // Drag & Drop handlers for reordering
+          thumb.addEventListener('dragstart', (ev)=>{
+            ev.dataTransfer.setData('text/plain', String(idx));
+            thumb.style.opacity = '0.5';
+          });
+          thumb.addEventListener('dragend', (ev)=>{
+            thumb.style.opacity = '';
+            refreshList();
+          });
+          thumb.addEventListener('dragover', (ev)=>{ ev.preventDefault(); thumb.classList.add('drag-over'); });
+          thumb.addEventListener('dragleave', ()=>{ thumb.classList.remove('drag-over'); });
+          thumb.addEventListener('drop', (ev)=>{
+            ev.preventDefault(); thumb.classList.remove('drag-over');
+            const from = parseInt(ev.dataTransfer.getData('text/plain'), 10);
+            const to = idx;
+            if(Number.isFinite(from) && from !== to){
+              const item = selectedImages.splice(from,1)[0];
+              selectedImages.splice(to,0,item);
+              refreshList();
+            }
+          });
+        });
+        hiddenInput.value = JSON.stringify(selectedImages.slice(0,10));
+      }
+
       uploadInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          selectedImageData = evt.target.result;
-          preview.style.backgroundImage = `url('${selectedImageData}')`;
-          preview.style.display = 'block';
-          cropBtn.disabled = false;
-        };
-        reader.readAsDataURL(file);
+        const files = Array.from(e.target.files || []);
+        if(!files.length) return;
+        files.forEach(file=>{
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            // preserve original file dataURL unless user crops it
+            selectedImages.push(evt.target.result);
+            refreshList();
+          };
+          reader.readAsDataURL(file);
+        });
       });
-      
-      cropBtn.addEventListener('click', () => {
-        if(!selectedImageData) return;
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Размеры карточки товара (пропорции)
-          const targetWidth = 280;
-          const targetHeight = 280;
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          
-          // Вычисляем масштабирование для заполнения canvas с обрезкой
-          const imgAspect = img.width / img.height;
-          const canvasAspect = targetWidth / targetHeight;
-          let srcWidth, srcHeight, srcX = 0, srcY = 0;
-          
-          if(imgAspect > canvasAspect) {
-            // Изображение шире - обрезаем бока
-            srcHeight = img.height;
-            srcWidth = img.height * canvasAspect;
-            srcX = (img.width - srcWidth) / 2;
-          } else {
-            // Изображение выше - обрезаем сверху/снизу
-            srcWidth = img.width;
-            srcHeight = img.width / canvasAspect;
-            srcY = (img.height - srcHeight) / 2;
-          }
-          
-          ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, targetWidth, targetHeight);
-          selectedImageData = canvas.toDataURL('image/jpeg', 0.9);
-          preview.style.backgroundImage = `url('${selectedImageData}')`;
-        };
-        img.src = selectedImageData;
+
+      // Add from URL
+      section.querySelector('#add-from-url').addEventListener('click', ()=>{
+        const url = prompt('Вставьте ссылку на изображение');
+        if(url) { selectedImages.push(url); refreshList(); }
       });
-      
+
+      refreshList();
       return section;
     };
     
@@ -310,7 +391,9 @@
       e.preventDefault();
       const fd = new FormData(form);
       let priceValue = fd.get('price').replace(/[^\d]/g, '');
-      const updated = { id: product.id, title: fd.get('title'), price: priceValue, image: selectedImageData, category: fd.get('category'), description: fd.get('description'), colors: [] };
+      let imagesVal = [];
+      try{ imagesVal = JSON.parse(fd.get('images') || '[]'); }catch(e){ imagesVal = []; }
+      const updated = { id: product.id, title: fd.get('title'), price: priceValue, images: imagesVal, image: imagesVal[0] || '', category: fd.get('category'), description: fd.get('description'), colors: [] };
       // try to save to API (POST for new, PUT for existing). Fallback to localStorage on failure.
       const existing = (await loadProducts()).some(p=>p.id === product.id);
       let ok = null;
