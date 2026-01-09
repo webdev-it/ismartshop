@@ -149,6 +149,19 @@ function showView(id){
 let productsCache = [];
 let categoriesCache = [];
 let currentProductId = null;
+// Normalize products: ensure `images` array and numeric `priceNum`
+function normalizeProducts(list){
+  return (list || []).map(p=>{
+    let imgs = Array.isArray(p.images) ? p.images.slice() : [];
+    if(!imgs.length && p.image){ imgs = [p.image]; }
+    if(!imgs.length && p.images && typeof p.images === 'string'){
+      try{ const parsed = JSON.parse(p.images); if(Array.isArray(parsed)) imgs = parsed; }catch(e){}
+    }
+    const imgsSan = (imgs || []).map(s=> (s||'').trim()).filter(Boolean);
+    const priceNum = Number(String(p.price || p.price === 0 ? p.price : '').replace(/[^0-9.\-\.]/g, '')) || 0;
+    return { ...p, images: imgsSan, image: imgsSan[0] || '', priceNum };
+  });
+}
 // Body scroll lock helpers for modals
 let __productScrollY = 0;
 let __savedTabbarDisplay = null;
@@ -967,6 +980,10 @@ function renderProducts(products, searchQuery = ''){
       (p.description && p.description.toLowerCase().includes(query))
     );
   }
+  // If a specific category is selected, sort by price (high -> low)
+  if(selectedCategory !== 'all'){
+    filtered.sort((a,b)=> (b.priceNum || Number(b.price || 0)) - (a.priceNum || Number(a.price || 0)) );
+  }
   filtered.forEach((p,i) => {
     const wrap = document.createElement('div');
     wrap.className = 'card-wrap';
@@ -1026,10 +1043,18 @@ function renderCategories(categories){
     b.textContent = c.name;
     b.dataset.id = c.id;
     b.addEventListener('click', async ()=>{
-      selectedCategory = c.id;
-      // toggle active class
-      document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
-      b.classList.add('active');
+      // toggle category: clicking same category again resets to 'all'
+      if(selectedCategory === c.id){
+        selectedCategory = 'all';
+        document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+        // reshuffle products for homepage randomness
+        productsCache = normalizeProducts(productsCache);
+        (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(productsCache);
+      } else {
+        selectedCategory = c.id;
+        document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+        b.classList.add('active');
+      }
       // re-render products with current search
       renderProducts(productsCache, currentSearchQuery);
     });
@@ -1214,12 +1239,15 @@ onReady(async function(){
   }
 
   const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
-  productsCache = products;
+  // normalize products and shuffle for randomized homepage
+  let normalized = normalizeProducts(products || []);
+  (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(normalized);
+  productsCache = normalized;
   categoriesCache = categories;
   renderCategories(categories);
-  renderProducts(products);
+  renderProducts(productsCache);
   setupCarousel();
-  setupTabs(products);
+  setupTabs(productsCache);
   attachBuyHandlers();
 
   // Setup search functionality
