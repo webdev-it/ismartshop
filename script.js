@@ -200,7 +200,16 @@ async function showProduct(productId){
     const res = await apiFetch('/api/products/' + encodeURIComponent(productId));
     if(res && res.ok){
       const json = await res.json();
-      if(json && json.id) p = json;
+      if(json && json.id){
+        try{
+          // normalize server product so `images` is an array (handles JSON-string legacy)
+          const norm = normalizeProducts([json])[0];
+          p = norm || json;
+          // merge into local cache so other views see the fresh shape
+          const idx = productsCache.findIndex(x=>x.id === p.id);
+          if(idx >= 0) productsCache[idx] = p; else productsCache.push(p);
+        }catch(e){ p = json; }
+      }
     }
   }catch(e){ /* fallback to cache */ }
   // build images array (support legacy `image` field)
