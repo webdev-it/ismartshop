@@ -475,16 +475,26 @@
       // try to save to API (POST for new, PUT for existing). Fallback to localStorage on failure.
       const existing = (await loadProducts()).some(p=>p.id === product.id);
       let ok = null;
-      if(existing){
-        ok = await tryApi('PUT', `/api/products/${product.id}`, updated);
-      } else {
-        ok = await tryApi('POST', '/api/products', updated);
-      }
+      try{
+        if(existing){
+          ok = await tryApi('PUT', `/api/products/${product.id}`, updated);
+        } else {
+          ok = await tryApi('POST', '/api/products', updated);
+        }
+      }catch(err){ ok = null; }
+      console.log('[Admin] save product response:', ok);
       let products = await loadProducts();
       if(!ok){
+        // server save failed or returned non-JSON -> persist locally and inform admin
         const idx = products.findIndex(x=>x.id===product.id);
         if(idx>=0) products[idx] = updated; else products.push(updated);
         await saveProductsLocally(products);
+        alert('Сохранено локально. Сервер недоступен или вернул ошибку. Проверьте консоль для деталей.');
+      } else {
+        // server saved: refresh products from API to ensure server state is shown
+        try{
+          products = await loadProducts();
+        }catch(e){ console.warn('Reload after save failed', e); }
       }
       renderProducts(); renderDashboard(); closeProductForm();
     });
