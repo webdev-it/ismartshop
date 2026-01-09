@@ -917,7 +917,7 @@ async function renderProfile(){
   try{
     const user = await checkCurrentUser();
     if(!user){
-      el.innerHTML = '<p style="padding:16px;color:#666">Пожалуйста, войдите в аккаунт.</p>';
+      el.innerHTML = '<p style="padding:16px;color:#666">Регистрация и вход в аккаунт сейчас недоступны! <br>Все избранные товары будут храниться только на вашем устройстве. <br>По всем интересующим вопросам вы можете обратиться в тех.поддержку. Контакты вы найдёте на странице <a href="/contacts">контактов.</a></p>';
       return;
     }
     
