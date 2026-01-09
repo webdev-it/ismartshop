@@ -207,67 +207,92 @@
     // Helper: Image uploader and cropper (multi-image)
     let selectedImages = Array.isArray(product.images) && product.images.length ? product.images.slice() : [];
 
-    // Basic cropper modal: src (dataURL or URL), cb receives cropped dataURL or null
+    // Touch-friendly cropper modal: allows pan & pinch-zoom like mobile editors
     function openCropperModal(src, cb){
       const modal = document.createElement('div');
-      modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0; modal.style.zIndex = 2000; modal.style.background = 'rgba(0,0,0,0.6)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center';
-      const card = document.createElement('div'); card.style.background='#fff'; card.style.padding='12px'; card.style.borderRadius='8px'; card.style.maxWidth='90vw'; card.style.maxHeight='90vh'; card.style.overflow='auto'; card.style.display='flex'; card.style.flexDirection='column'; card.style.gap='8px';
-      const canvas = document.createElement('canvas'); canvas.style.maxWidth='80vw'; canvas.style.maxHeight='70vh'; canvas.style.border='1px solid #ddd'; canvas.style.cursor='crosshair';
-      const info = document.createElement('div'); info.style.fontSize='12px'; info.style.color='#333'; info.textContent='Нарисуйте прямоугольник мышью, затем нажмите "Обрезать".';
-      const btnRow = document.createElement('div'); btnRow.style.display = 'flex'; btnRow.style.gap = '8px'; btnRow.style.justifyContent = 'flex-end';
+      modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0; modal.style.zIndex = 2000; modal.style.background = 'rgba(0,0,0,0.75)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.padding = '20px';
+      const card = document.createElement('div'); card.style.background='#fff'; card.style.padding='12px'; card.style.borderRadius='12px'; card.style.maxWidth='96vw'; card.style.maxHeight='92vh'; card.style.overflow='hidden'; card.style.display='flex'; card.style.flexDirection='column'; card.style.gap='8px'; card.style.alignItems='stretch';
+      // viewport for crop (visual square area)
+      const viewport = document.createElement('div'); viewport.style.width = 'min(720px, 86vw)'; viewport.style.height = 'min(540px, 64vh)'; viewport.style.background = '#111'; viewport.style.overflow = 'hidden'; viewport.style.position = 'relative'; viewport.style.borderRadius='8px'; viewport.style.touchAction = 'none';
+      const imgEl = document.createElement('img'); imgEl.style.position = 'absolute'; imgEl.style.left = '50%'; imgEl.style.top = '50%'; imgEl.style.transform = 'translate(-50%, -50%) scale(1)'; imgEl.style.maxWidth = 'none'; imgEl.style.maxHeight = 'none'; imgEl.style.willChange = 'transform'; imgEl.draggable = false; imgEl.src = src;
+      viewport.appendChild(imgEl);
+      const info = document.createElement('div'); info.style.fontSize='13px'; info.style.color='#333'; info.textContent='Панорамируйте и масштабируйте изображение, затем нажмите "Обрезать".';
+      const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px'; controls.style.justifyContent='flex-end';
       const cancelBtn = document.createElement('button'); cancelBtn.textContent='Отмена';
       const cropBtn = document.createElement('button'); cropBtn.textContent='Обрезать';
-      btnRow.appendChild(cancelBtn); btnRow.appendChild(cropBtn);
-      card.appendChild(canvas); card.appendChild(info); card.appendChild(btnRow); modal.appendChild(card); document.body.appendChild(modal);
+      const zoomOut = document.createElement('button'); zoomOut.textContent='−'; zoomOut.title = 'Уменьшить';
+      const zoomIn = document.createElement('button'); zoomIn.textContent='+'; zoomIn.title = 'Увеличить';
+      controls.appendChild(zoomOut); controls.appendChild(zoomIn); controls.appendChild(cancelBtn); controls.appendChild(cropBtn);
+      card.appendChild(viewport); card.appendChild(info); card.appendChild(controls); modal.appendChild(card); document.body.appendChild(modal);
 
-      const ctx = canvas.getContext('2d');
-      const img = new Image(); img.crossOrigin = 'anonymous';
-      let scale = 1;
-      img.onload = ()=>{
-        const maxW = Math.min(window.innerWidth * 0.8, img.width);
-        const maxH = Math.min(window.innerHeight * 0.7, img.height);
-        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
-        canvas.width = Math.round(img.width * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        scale = img.width / canvas.width;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+      // simple local body lock for admin cropper
+      const prevBodyOverflow = document.body.style.overflow; try{ document.body.style.overflow = 'hidden'; }catch(e){}
+
+      let imgNaturalW = 0, imgNaturalH = 0;
+      let scale = 1; let translate = { x:0, y:0 };
+      function updateTransform(){ imgEl.style.transform = `translate(calc(-50% + ${translate.x}px), calc(-50% + ${translate.y}px)) scale(${scale})`; }
+
+      imgEl.onload = ()=>{ imgNaturalW = imgEl.naturalWidth; imgNaturalH = imgEl.naturalHeight; // fit image initially
+        const vw = viewport.clientWidth; const vh = viewport.clientHeight; const fitScale = Math.max(vw / imgNaturalW, vh / imgNaturalH); // cover
+        scale = fitScale; translate = { x:0, y:0 }; updateTransform();
       };
-      img.onerror = ()=>{ alert('Не удалось загрузить изображение для обрезки.'); closeModal(null); };
-      img.src = src;
 
-      // selection
-      let sel = null; let dragging = false; let startX=0, startY=0;
-      function redraw(){
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
-        if(sel){
-          ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-          ctx.clearRect(sel.x, sel.y, sel.w, sel.h);
-          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(sel.x+1, sel.y+1, sel.w-2, sel.h-2);
-        }
+      // pointer-based panning
+      let pointerDown = false; let lastPos = null; let pointers = {};
+      function onPointerDown(e){ e.preventDefault(); e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); pointers[e.pointerId] = { x: e.clientX, y: e.clientY }; if(Object.keys(pointers).length === 1){ pointerDown = true; lastPos = { x: e.clientX, y: e.clientY }; } }
+      function onPointerMove(e){ e.preventDefault(); if(Object.keys(pointers).length === 2){ // pinch
+          const ids = Object.keys(pointers).map(id=>parseInt(id,10)); const p0 = pointers[ids[0]]; const p1 = pointers[ids[1]]; if(!p0 || !p1) return; const curDist = Math.hypot(p1.x - p0.x, p1.y - p0.y); const newP0 = (e.pointerId==ids[0])? {x:e.clientX,y:e.clientY}:p0; const newP1 = (e.pointerId==ids[1])? {x:e.clientX,y:e.clientY}:p1; const newDist = Math.hypot(newP1.x - newP0.x, newP1.y - newP0.y); if(p0._startDist == null){ p0._startDist = curDist; p0._startScale = scale; }
+            const base = p0._startDist || curDist; const factor = newDist / base; scale = Math.max(0.1, (p0._startScale || scale) * factor); updateTransform();
+        } else if(pointerDown && lastPos){ const dx = e.clientX - lastPos.x; const dy = e.clientY - lastPos.y; translate.x += dx; translate.y += dy; lastPos = { x: e.clientX, y: e.clientY }; updateTransform(); }
+        pointers[e.pointerId] && (pointers[e.pointerId].x = e.clientX, pointers[e.pointerId].y = e.clientY);
       }
-      function onMouseMove(e){ if(!dragging) return; const r = canvas.getBoundingClientRect(); const mx = e.clientX - r.left; const my = e.clientY - r.top; sel.x = Math.min(startX, mx); sel.y = Math.min(startY, my); sel.w = Math.abs(mx - startX); sel.h = Math.abs(my - startY); redraw(); }
-      function onMouseUp(e){ if(!dragging) return; dragging = false; if(sel && sel.w>2 && sel.h>2) info.textContent = 'Выделено: ' + Math.round(sel.w*scale) + '×' + Math.round(sel.h*scale) + ' px'; else info.textContent='Нарисуйте прямоугольник мышью, затем нажмите "Обрезать".'; }
-      canvas.addEventListener('mousedown', (e)=>{ const r = canvas.getBoundingClientRect(); startX = e.clientX - r.left; startY = e.clientY - r.top; dragging = true; sel = { x:startX, y:startY, w:1, h:1 }; redraw(); });
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
+      function onPointerUp(e){ e.preventDefault(); try{ e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId); }catch(er){} delete pointers[e.pointerId]; if(Object.keys(pointers).length < 2) { pointerDown = false; lastPos = null; Object.values(pointers).forEach(p=>{ delete p._startDist; delete p._startScale; }); } }
 
-      function closeModal(result){ try{ window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); }catch(e){} modal.remove(); cb && cb(result); }
+      // touch pinch support (for browsers that don't forward multi pointers reliably)
+      let lastTouchDist = null;
+      viewport.addEventListener('touchstart', (ev)=>{ if(ev.touches.length === 2){ lastTouchDist = Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX, ev.touches[0].clientY-ev.touches[1].clientY); } }, { passive:false });
+      viewport.addEventListener('touchmove', (ev)=>{ if(ev.touches.length === 2){ ev.preventDefault(); const d = Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX, ev.touches[0].clientY-ev.touches[1].clientY); if(lastTouchDist){ const factor = d / lastTouchDist; scale = Math.max(0.1, scale * factor); updateTransform(); } lastTouchDist = d; } }, { passive:false });
+      viewport.addEventListener('touchend', (ev)=>{ if(ev.touches.length < 2) lastTouchDist = null; }, { passive:true });
+
+      viewport.addEventListener('pointerdown', onPointerDown);
+      viewport.addEventListener('pointermove', onPointerMove);
+      viewport.addEventListener('pointerup', onPointerUp);
+      viewport.addEventListener('pointercancel', onPointerUp);
+
+      // wheel zoom (desktop)
+      viewport.addEventListener('wheel', (e)=>{ e.preventDefault(); const delta = -e.deltaY; const factor = 1 + (delta>0?0.08:-0.08); scale = Math.max(0.1, scale * factor); updateTransform(); }, { passive:false });
+
+      zoomIn.addEventListener('click', ()=>{ scale = scale * 1.12; updateTransform(); });
+      zoomOut.addEventListener('click', ()=>{ scale = Math.max(0.1, scale / 1.12); updateTransform(); });
+
+      function closeModal(result){ try{ viewport.removeEventListener('pointerdown', onPointerDown); viewport.removeEventListener('pointermove', onPointerMove); viewport.removeEventListener('pointerup', onPointerUp); viewport.removeEventListener('pointercancel', onPointerUp); }catch(e){} try{ document.body.style.overflow = prevBodyOverflow; }catch(e){} modal.remove(); cb && cb(result); }
 
       cancelBtn.addEventListener('click', ()=> closeModal(null));
       cropBtn.addEventListener('click', ()=>{
-        if(!sel || sel.w<2 || sel.h<2){ return alert('Пожалуйста, выберите область обрезки.'); }
-        const sx = Math.max(0, Math.round(sel.x * scale));
-        const sy = Math.max(0, Math.round(sel.y * scale));
-        const sw = Math.min(img.width - sx, Math.round(sel.w * scale));
-        const sh = Math.min(img.height - sy, Math.round(sel.h * scale));
-        const out = document.createElement('canvas'); out.width = sw; out.height = sh; const octx = out.getContext('2d');
-        octx.drawImage(img, sx, sy, sw, sh, 0,0, sw, sh);
-        const data = out.toDataURL('image/png');
-        closeModal(data);
+        // compute visible rect in image natural coordinates
+        try{
+          const vw = viewport.clientWidth; const vh = viewport.clientHeight;
+          // image displayed center at 50%50 with translate and scale
+          const dispW = imgNaturalW * scale; const dispH = imgNaturalH * scale;
+          // top-left of image in viewport coords:
+          const imgLeft = (vw/2) - (dispW/2) + translate.x;
+          const imgTop = (vh/2) - (dispH/2) + translate.y;
+          // intersection of viewport [0,vw]x[0,vh] with image rectangle
+          const sx = Math.max(0, -imgLeft);
+          const sy = Math.max(0, -imgTop);
+          const sw = Math.min(dispW - sx, vw - Math.max(0, imgLeft));
+          const sh = Math.min(dispH - sy, vh - Math.max(0, imgTop));
+          if(sw <= 0 || sh <= 0) return alert('Неправильная позиция изображения для обрезки');
+          // convert to natural image coords
+          const nx = Math.round((sx / dispW) * imgNaturalW);
+          const ny = Math.round((sy / dispH) * imgNaturalH);
+          const nw = Math.round((sw / dispW) * imgNaturalW);
+          const nh = Math.round((sh / dispH) * imgNaturalH);
+          const out = document.createElement('canvas'); out.width = nw; out.height = nh; const octx = out.getContext('2d');
+          const baseImg = new Image(); baseImg.crossOrigin = 'anonymous'; baseImg.onload = ()=>{ octx.drawImage(baseImg, nx, ny, nw, nh, 0,0, nw, nh); const data = out.toDataURL('image/png'); closeModal(data); };
+          baseImg.src = src;
+        }catch(err){ alert('Ошибка при обрезке: ' + (err && err.message)); }
       });
-
     }
 
     const createImageSection = () => {

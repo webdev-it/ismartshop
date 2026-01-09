@@ -149,6 +149,33 @@ function showView(id){
 let productsCache = [];
 let categoriesCache = [];
 let currentProductId = null;
+// Body scroll lock helpers for modals
+let __productScrollY = 0;
+let __savedTabbarDisplay = null;
+function lockBodyScroll(){
+  try{
+    __productScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${__productScrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+  }catch(e){}
+  // hide tabbar if present
+  try{ const tab = document.querySelector('.tabbar'); if(tab){ __savedTabbarDisplay = tab.style.display || ''; tab.style.display = 'none'; } }catch(e){}
+}
+function unlockBodyScroll(){
+  try{
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.documentElement.style.scrollBehavior = '';
+    window.scrollTo(0, __productScrollY || 0);
+  }catch(e){}
+  // restore tabbar
+  try{ const tab = document.querySelector('.tabbar'); if(tab){ tab.style.display = (__savedTabbarDisplay === undefined ? '' : __savedTabbarDisplay); __savedTabbarDisplay = null; } }catch(e){}
+}
 
 // Product detail view
 function showProduct(productId){
@@ -161,7 +188,7 @@ function showProduct(productId){
   const imgContainer = document.querySelector('.product-image');
     if(imgContainer){
     // prevent body scroll while modal open
-    try{ document.body.style.overflow = 'hidden'; }catch(e){}
+    try{ lockBodyScroll(); }catch(e){}
     imgContainer.innerHTML = '';
     const gallery = document.createElement('div'); gallery.id = 'product-gallery'; gallery.style.position='relative'; gallery.style.display='flex'; gallery.style.alignItems='center'; gallery.style.justifyContent='center'; gallery.style.height='320px'; gallery.style.overflow='hidden';
     const slides = document.createElement('div'); slides.style.display='flex'; slides.style.transition='transform 220ms ease'; slides.style.height='100%';
@@ -194,6 +221,16 @@ function showProduct(productId){
       slides.addEventListener('touchstart', (ev)=>{ if(ev.touches && ev.touches[0]) touchStartX = ev.touches[0].clientX; }, { passive:true });
       slides.addEventListener('touchmove', (ev)=>{ if(ev.touches && ev.touches[0]) touchDeltaX = ev.touches[0].clientX - touchStartX; }, { passive:true });
       slides.addEventListener('touchend', ()=>{ if(Math.abs(touchDeltaX) > 40){ if(touchDeltaX < 0) index = (index + 1) % imgs.length; else index = (index - 1 + imgs.length) % imgs.length; } touchDeltaX = 0; update(); });
+
+      // Prevent overscroll bounce on iOS inside slides container
+      slides.addEventListener('touchmove', function(e){
+        // If slides container is at extremes, prevent body overscroll
+        const maxOffset = (imgs.length - 1) * slides.clientWidth;
+        const curOffset = -index * slides.clientWidth + (touchDeltaX || 0);
+        if((curOffset >= 0 && touchDeltaX > 0) || (Math.abs(curOffset) >= maxOffset && touchDeltaX < 0)){
+          e.preventDefault();
+        }
+      }, { passive:false });
     }
     imgContainer.appendChild(gallery);
     // Attach keyboard (Escape) and overlay click handlers to ensure modal can be closed
@@ -206,6 +243,25 @@ function showProduct(productId){
         document.addEventListener('keydown', __productModalKeyHandler);
         __productModalOverlayHandler = (ev)=>{ if(ev.target === vp) closeProductModal(); };
         vp.addEventListener('click', __productModalOverlayHandler);
+        // focus trap inside modal
+        const focusableSelector = 'a[href], area[href], input:not([disabled]), button:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        let prevFocus = document.activeElement;
+        const focusables = Array.from(vp.querySelectorAll(focusableSelector));
+        if(focusables.length) focusables[0].focus();
+        const onKeyTab = (e)=>{
+          if(e.key !== 'Tab') return;
+          const f = focusables;
+          if(!f.length) return;
+          const idx = f.indexOf(document.activeElement);
+          if(e.shiftKey){ // backward
+            if(idx === 0){ e.preventDefault(); f[f.length-1].focus(); }
+          } else {
+            if(idx === f.length-1){ e.preventDefault(); f[0].focus(); }
+          }
+        };
+        document.addEventListener('keydown', onKeyTab);
+        // store handler so we can remove it on close
+        __productModalFocusTrap = onKeyTab;
       }
     }catch(e){}
   }
@@ -231,11 +287,13 @@ function showProduct(productId){
 // Centralized close handler for product modal (ensures cleanup)
 let __productModalKeyHandler = null;
 let __productModalOverlayHandler = null;
+let __productModalFocusTrap = null;
 function closeProductModal(){
   showView('view-home');
-  try{ document.body.style.overflow = ''; }catch(e){}
+  try{ unlockBodyScroll(); }catch(e){}
   try{ if(__productModalKeyHandler) { document.removeEventListener('keydown', __productModalKeyHandler); __productModalKeyHandler = null; } }catch(e){}
   try{ if(__productModalOverlayHandler){ const vp = document.getElementById('view-product'); vp && vp.removeEventListener('click', __productModalOverlayHandler); __productModalOverlayHandler = null; } }catch(e){}
+  try{ if(__productModalFocusTrap){ document.removeEventListener('keydown', __productModalFocusTrap); __productModalFocusTrap = null; } }catch(e){}
 }
 document.getElementById('product-close')?.addEventListener('click', (ev)=>{ ev.stopPropagation(); closeProductModal(); });
 document.getElementById('product-fav')?.addEventListener('click', (e)=>{

@@ -307,8 +307,7 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 .favorites-header{padding:8px 6px}
 .favorites-pill{padding:16px 28px;border-radius:28px;background:var(--card-white);font-size:22px;font-weight:700;border:0;box-shadow:0 10px 22px rgba(0,0,0,0.06)}
 
-/* Product detail view shown as centered overlay */
-#view-product{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:150;background:rgba(0,0,0,0.35);padding:20px}
+#view-product{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:99999;background:rgba(0,0,0,0.45);padding:20px}
 .product-wrap{width:100%;max-width:980px}
 .product-card{background:linear-gradient(180deg, var(--card-white), rgba(245,245,245,0.95));border-radius:18px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;width:100%;max-height:calc(100vh - 80px);z-index:151}
 
@@ -326,6 +325,15 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 
 /* ensure sticky actions have slight shadow to separate from content */
 .product-actions{box-shadow:0 -6px 20px rgba(0,0,0,0.12)}
+
+/* iOS / mobile scrolling helpers */
+.product-body{ -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;}
+
+/* Ensure modal overlay prevents background overscroll on iOS */
+#view-product{ -webkit-overflow-scrolling: touch; overscroll-behavior: contain;}
+
+/* Respect safe area on iPhone X+ when modal is full-screen */
+#view-product { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); }
 .product-body{padding:18px 16px 20px}
 .product-price{font-weight:800;font-size:20px;margin-bottom:8px}
 .product-title{font-size:16px;margin-bottom:10px;color:var(--text)}
@@ -367,8 +375,9 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 .auth-top{padding:10px}
 
 /* Footer styles */
-.site-footer{position:relative;z-index:60;padding:24px 12px;background:transparent;border-top:1px solid rgba(0,0,0,0.04);backdrop-filter:blur(6px);margin-top:48px}
-.site-footer{z-index:1000}
+.site-footer{position:relative;z-index:10;padding:24px 12px;background:transparent;border-top:1px solid rgba(0,0,0,0.04);backdrop-filter:blur(6px);margin-top:48px}
+/* lower footer z-index so modals and overlays appear above it */
+.site-footer{z-index:10}
 .site-footer-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .footer-left{display:flex;flex-direction:column}
 .footer-brand{font-weight:800;font-size:18px}
