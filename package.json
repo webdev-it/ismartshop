@@ -1,21 +1,26 @@
 {
-  "name": "ismartshop-frontend",
+  "name": "ismartshop-backend",
   "version": "0.1.0",
   "private": true,
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "server.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
-    "expo": "^48.0.0",
-    "expo-status-bar": "~1.4.0",
-    "react": "18.2.0",
-    "react-native": "0.71.0"
+    "bcrypt": "^5.1.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "pg": "^8.10.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "helmet": "^6.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.1",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.9"
+    "nodemon": "^2.0.22"
   }
 }

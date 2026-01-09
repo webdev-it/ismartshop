@@ -1,31 +1,35 @@
-# iSmartStore Frontend (Web Prototype)
+# iSmartShop Backend (dev)
 
-This folder contains a static HTML/CSS/JS prototype that reproduces the mobile UI from the provided screenshot.
+This is a minimal dev scaffold for the iSmartShop backend. It serves the static frontend and provides simple API endpoints backed by in-memory sample data. It is intended as a starting point — we'll add PostgreSQL + Prisma, auth, SMTP and admin endpoints next.
 
-Files
-- `index.html` — main page (mobile layout)
-- `styles.css` — styles to match the screenshot
-- `script.js` — injects product cards and handles carousel; attempts to fetch `/api/products` and falls back to local sample data
+Getting started (dev)
 
-How it works
-- Products are expected to be served from `/api/products` (JSON). For now `script.js` falls back to sample data.
+1. Copy `.env.example` to `.env` and fill values (DATABASE_URL, SMTP settings, etc.)
 
-Run locally
-- Open `index.html` in the browser (recommended to use a local static server for fetch to work):
+2. Install dependencies:
 
 ```powershell
-cd frontend
-# if you have npm installed, install serve once
-npm install -g serve
-serve . -p 3000
-# then open http://localhost:3000 in a mobile-width browser or device emulator
+cd backend
+npm install
 ```
 
-- Alternatively use the VS Code Live Server extension.
+3. Start the dev server:
 
-Next steps I can do
-- Polish visuals to match the screenshot exactly (blurred background, refined shadows, typography tweaks).
-- Add a small JSON mock endpoint and a tiny Node dev server so the frontend fetches real endpoints.
-- Implement admin panel and then the Node.js backend API.
+```powershell
+npm run dev
+# or
+npm start
+```
 
-Tell me which next step you'd like and I will implement it (e.g., add mock API server, refine visuals, or integrate real backend later).
+4. Open http://localhost:3000 (or the port set in `.env`) to view the frontend. The backend exposes:
+
+- `GET /api/health` — health check
+- `GET /api/products` — sample product list
+- `GET /api/categories` — sample categories
+- `GET /admin` — admin placeholder (serves `frontend/admin.html`)
+
+Next steps
+- Integrate PostgreSQL and Prisma and migrate sample data to the DB.
+- Implement auth (register/login/email verification) and session or JWT flows.
+- Implement product/category CRUD endpoints protected for admin role.
+- Add threads/messages API and real-time notifications (Socket.IO) for admin chat.
