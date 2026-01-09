@@ -9,6 +9,11 @@
   async function apiFetch(path, opts = {}){
     const url = (path.startsWith('http') || path.startsWith('/')) ? API_BASE + path : API_BASE + '/' + path;
     const init = { credentials: 'include', headers: {}, ...opts };
+    // attach stored bearer token if present (helps when cookies are not set cross-origin)
+    try{
+      const stored = localStorage.getItem('ismart_admin_token');
+      if(stored && !init.headers.Authorization && !init.headers.Authorization){ init.headers['Authorization'] = 'Bearer ' + stored; }
+    }catch(e){}
     if(init.body && typeof init.body === 'object' && !(init.body instanceof FormData)){
       init.headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(init.body);
@@ -116,6 +121,8 @@
       if(!resp.ok){
         return { error: body || (`status ${resp.status}`) };
       }
+      // persist token locally so subsequent requests can use Authorization header
+      try{ if(body && body.token) localStorage.setItem('ismart_admin_token', body.token); }catch(e){}
       // on success, try to fetch current user (cookie should be set)
       let me = await tryApi('GET','/auth/me');
       // If cookie-based fetch returned null (sometimes cookies aren't set immediately),
@@ -141,6 +148,7 @@
   async function doLogout(){
     await tryApi('POST','/auth/logout');
     currentUser = null;
+    try{ localStorage.removeItem('ismart_admin_token'); }catch(e){}
     // reload UI
     $('#admin-status-text').textContent = 'offline';
     // show login modal
