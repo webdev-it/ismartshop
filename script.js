@@ -213,7 +213,12 @@ async function showProduct(productId){
     }
   }catch(e){ /* fallback to cache */ }
   // build images array (support legacy `image` field)
+  try{
+    // ensure product shape normalized (images => array)
+    p = normalizeProducts([p])[0] || p;
+  }catch(e){/* ignore */}
   const imgs = (Array.isArray(p.images) && p.images.length) ? p.images : (p.image ? [p.image] : []);
+  console.log('[showProduct] product id=', p.id, 'images:', p.images, 'imgs.length=', imgs.length);
   // render gallery inside .product-image
   const imgContainer = document.querySelector('.product-image');
     if(imgContainer){
