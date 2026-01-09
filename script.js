@@ -191,10 +191,18 @@ function unlockBodyScroll(){
 }
 
 // Product detail view
-function showProduct(productId){
+async function showProduct(productId){
   showView('view-product');
   currentProductId = productId;
-  const p = productsCache.find(x=>x.id === productId) || {title:'Товар', images:[]};
+  // try to fetch fresh product data from API to ensure images[] are present
+  let p = productsCache.find(x=>x.id === productId) || {title:'Товар', images:[]};
+  try{
+    const res = await apiFetch('/api/products/' + encodeURIComponent(productId));
+    if(res && res.ok){
+      const json = await res.json();
+      if(json && json.id) p = json;
+    }
+  }catch(e){ /* fallback to cache */ }
   // build images array (support legacy `image` field)
   const imgs = (Array.isArray(p.images) && p.images.length) ? p.images : (p.image ? [p.image] : []);
   // render gallery inside .product-image
