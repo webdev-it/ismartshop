@@ -184,9 +184,14 @@
   }
 
   async function renderProducts(){
-    const list = $('#products-list'); list.innerHTML = '';
     const products = await loadProducts();
-    products.forEach(p=>{
+    renderProductsList(products || []);
+  }
+
+  // Render a given products array into the admin list (no API fetch)
+  function renderProductsList(products){
+    const list = $('#products-list'); list.innerHTML = '';
+    (products || []).forEach(p=>{
       const el = document.createElement('div'); el.className = 'admin-item';
       el.innerHTML = `<strong>${p.title}</strong><div>${p.price} — ${p.category}</div><div class="admin-item-actions"><button data-id="${p.id}" class="edit-product">Edit</button><button data-id="${p.id}" class="del-product">Delete</button></div>`;
       list.appendChild(el);
