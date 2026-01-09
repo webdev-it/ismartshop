@@ -205,7 +205,24 @@
     const cats = await loadCategories();
     
     // Helper: Image uploader and cropper (multi-image)
-    let selectedImages = Array.isArray(product.images) && product.images.length ? product.images.slice() : [];
+      let selectedOriginals = Array.isArray(product.images) && product.images.length ? product.images.slice() : [];
+      let selectedImages = selectedOriginals.slice();
+
+      // create a resized preview (WebP if supported) from a dataURL or URL
+      function createPreviewFromSrc(src, maxW = 1200, quality = 0.8){
+        return new Promise((resolve)=>{
+          const img = new Image(); img.crossOrigin = 'anonymous';
+          img.onload = ()=>{
+            const ratio = Math.min(1, maxW / img.width);
+            const w = Math.round(img.width * ratio);
+            const h = Math.round(img.height * ratio);
+            const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); ctx.drawImage(img, 0,0, w, h);
+            try{ const webp = c.toDataURL('image/webp', quality); resolve(webp); }catch(e){ resolve(c.toDataURL('image/png')); }
+          };
+          img.onerror = ()=>{ resolve(src); };
+          img.src = src;
+        });
+      }
 
     // Touch-friendly cropper modal: allows pan & pinch-zoom like mobile editors
     function openCropperModal(src, cb){
@@ -306,6 +323,7 @@
         </label>
         <div id="images-list" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"></div>
         <input type="hidden" name="images" value="">
+          <input type="hidden" name="images_preview" value="">
       `;
 
       const uploadInput = section.querySelector('#image-upload');
@@ -329,10 +347,19 @@
           thumb.appendChild(controls);
           imagesList.appendChild(thumb);
 
-          leftBtn.addEventListener('click', ()=>{ if(idx>0){ const a=selectedImages[idx-1]; selectedImages[idx-1]=selectedImages[idx]; selectedImages[idx]=a; refreshList(); } });
-          rightBtn.addEventListener('click', ()=>{ if(idx<selectedImages.length-1){ const a=selectedImages[idx+1]; selectedImages[idx+1]=selectedImages[idx]; selectedImages[idx]=a; refreshList(); } });
-          delBtn.addEventListener('click', ()=>{ if(confirm('Удалить изображение?')){ selectedImages.splice(idx,1); refreshList(); } });
-          cropBtn.addEventListener('click', ()=> openCropperModal(src, (cropped)=>{ if(cropped){ selectedImages[idx]=cropped; refreshList(); } }));
+          leftBtn.addEventListener('click', ()=>{ if(idx>0){ const a=selectedImages[idx-1]; selectedImages[idx-1]=selectedImages[idx]; selectedImages[idx]=a; const ao = selectedOriginals[idx-1]; selectedOriginals[idx-1]=selectedOriginals[idx]; selectedOriginals[idx]=ao; refreshList(); } });
+          rightBtn.addEventListener('click', ()=>{ if(idx<selectedImages.length-1){ const a=selectedImages[idx+1]; selectedImages[idx+1]=selectedImages[idx]; selectedImages[idx]=a; const ao = selectedOriginals[idx+1]; selectedOriginals[idx+1]=selectedOriginals[idx]; selectedOriginals[idx]=ao; refreshList(); } });
+          delBtn.addEventListener('click', ()=>{ if(confirm('Удалить изображение?')){ selectedImages.splice(idx,1); selectedOriginals.splice(idx,1); refreshList(); } });
+          cropBtn.addEventListener('click', ()=>{
+            const origSrc = selectedOriginals[idx] || src;
+            openCropperModal(origSrc, async (cropped)=>{ if(cropped){
+              // replace original and regenerate preview
+              selectedOriginals[idx] = cropped;
+              const preview = await createPreviewFromSrc(cropped, 1200, 0.8);
+              selectedImages[idx] = preview;
+              refreshList();
+            } });
+          });
 
           // Drag & Drop handlers for reordering
           thumb.addEventListener('dragstart', (ev)=>{
@@ -351,32 +378,47 @@
             const to = idx;
             if(Number.isFinite(from) && from !== to){
               const item = selectedImages.splice(from,1)[0];
+              const itemOrig = selectedOriginals.splice(from,1)[0];
               selectedImages.splice(to,0,item);
+              selectedOriginals.splice(to,0,itemOrig);
               refreshList();
             }
           });
         });
         hiddenInput.value = JSON.stringify(selectedImages.slice(0,10));
+          const origInput = section.querySelector('input[name="images"]');
+          const prevInput = section.querySelector('input[name="images_preview"]');
+          if(origInput) origInput.value = JSON.stringify(selectedOriginals.slice(0,10));
+          if(prevInput) prevInput.value = JSON.stringify(selectedImages.slice(0,10));
       }
 
-      uploadInput.addEventListener('change', (e) => {
-        const files = Array.from(e.target.files || []);
-        if(!files.length) return;
-        files.forEach(file=>{
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            // preserve original file dataURL unless user crops it
-            selectedImages.push(evt.target.result);
-            refreshList();
-          };
-          reader.readAsDataURL(file);
+        uploadInput.addEventListener('change', (e) => {
+          const files = Array.from(e.target.files || []);
+          if(!files.length) return;
+          files.forEach(file=>{
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+              // preserve original file dataURL
+              const orig = evt.target.result;
+              selectedOriginals.push(orig);
+              // generate preview and push for UI
+              const preview = await createPreviewFromSrc(orig, 1200, 0.8);
+              selectedImages.push(preview);
+              refreshList();
+            };
+            reader.readAsDataURL(file);
+          });
         });
-      });
 
       // Add from URL
-      section.querySelector('#add-from-url').addEventListener('click', ()=>{
+      section.querySelector('#add-from-url').addEventListener('click', async ()=>{
         const url = prompt('Вставьте ссылку на изображение');
-        if(url) { selectedImages.push(url); refreshList(); }
+        if(!url) return;
+        // add as original and generate preview
+        selectedOriginals.push(url);
+        const preview = await createPreviewFromSrc(url, 1200, 0.8);
+        selectedImages.push(preview);
+        refreshList();
       });
 
       refreshList();
@@ -426,8 +468,10 @@
       const fd = new FormData(form);
       let priceValue = fd.get('price').replace(/[^\d]/g, '');
       let imagesVal = [];
-      try{ imagesVal = JSON.parse(fd.get('images') || '[]'); }catch(e){ imagesVal = []; }
-      const updated = { id: product.id, title: fd.get('title'), price: priceValue, images: imagesVal, image: imagesVal[0] || '', category: fd.get('category'), description: fd.get('description'), colors: [] };
+        let imagesPreviewVal = [];
+        try{ imagesVal = JSON.parse(fd.get('images') || '[]'); }catch(e){ imagesVal = []; }
+        try{ imagesPreviewVal = JSON.parse(fd.get('images_preview') || '[]'); }catch(e){ imagesPreviewVal = []; }
+        const updated = { id: product.id, title: fd.get('title'), price: priceValue, images: imagesVal.length ? imagesVal : imagesPreviewVal, image: (imagesVal.length ? imagesVal[0] : imagesPreviewVal[0]) || '', category: fd.get('category'), description: fd.get('description'), colors: [] };
       // try to save to API (POST for new, PUT for existing). Fallback to localStorage on failure.
       const existing = (await loadProducts()).some(p=>p.id === product.id);
       let ok = null;

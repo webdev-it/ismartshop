@@ -191,10 +191,10 @@ function showProduct(productId){
     try{ lockBodyScroll(); }catch(e){}
     imgContainer.innerHTML = '';
     const gallery = document.createElement('div'); gallery.id = 'product-gallery'; gallery.style.position='relative'; gallery.style.display='flex'; gallery.style.alignItems='center'; gallery.style.justifyContent='center'; gallery.style.height='320px'; gallery.style.overflow='hidden';
-    const slides = document.createElement('div'); slides.style.display='flex'; slides.style.transition='transform 220ms ease'; slides.style.height='100%';
+    const slides = document.createElement('div'); slides.style.display='flex'; slides.style.transition='transform 220ms ease'; slides.style.height='100%'; slides.style.width = imgs.length > 0 ? (imgs.length * 100) + '%' : '100%';
     imgs.forEach((s, i)=>{
-      const wrap = document.createElement('div'); wrap.style.minWidth='100%'; wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center'; wrap.style.height='100%';
-      const im = document.createElement('img'); im.style.maxHeight='100%'; im.style.maxWidth='100%'; im.alt = p.title || '';
+      const wrap = document.createElement('div'); wrap.style.flex = '0 0 100%'; wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center'; wrap.style.height='100%'; wrap.style.overflow='hidden';
+      const im = document.createElement('img'); im.style.width = '100%'; im.style.height = '100%'; im.style.objectFit = 'cover'; im.alt = p.title || '';
       im.src = (s||'').trim() || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
       im.onerror = ()=>{ im.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; im.style.opacity='0.4'; };
       wrap.appendChild(im); slides.appendChild(wrap);
@@ -224,9 +224,9 @@ function showProduct(productId){
 
       // Prevent overscroll bounce on iOS inside slides container
       slides.addEventListener('touchmove', function(e){
-        // If slides container is at extremes, prevent body overscroll
-        const maxOffset = (imgs.length - 1) * slides.clientWidth;
-        const curOffset = -index * slides.clientWidth + (touchDeltaX || 0);
+        const containerWidth = gallery.clientWidth || 1;
+        const maxOffset = (imgs.length - 1) * containerWidth;
+        const curOffset = -index * containerWidth + (touchDeltaX || 0);
         if((curOffset >= 0 && touchDeltaX > 0) || (Math.abs(curOffset) >= maxOffset && touchDeltaX < 0)){
           e.preventDefault();
         }
