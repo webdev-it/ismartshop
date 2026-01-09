@@ -499,9 +499,25 @@
         await saveProductsLocally(products);
         alert('Сохранено локально. Сервер недоступен или вернул ошибку. Проверьте консоль для деталей.');
       } else {
-        // server saved: refresh products from API to ensure server state is shown
+        // server saved: try to refresh products from API. If API GET doesn't yet include
+        // the created product (eventual consistency), insert the returned object into
+        // local cache so admin sees it immediately.
         try{
-          products = await loadProducts();
+          const respList = await loadProducts();
+          products = respList || [];
+          try{
+            if(ok && ok.id){
+              const exists = products.some(p=> String(p.id) === String(ok.id));
+              if(!exists){
+                products.unshift(ok);
+                await saveProductsLocally(products);
+              } else {
+                // replace if differs
+                products = products.map(p=> String(p.id) === String(ok.id) ? ok : p);
+                await saveProductsLocally(products);
+              }
+            }
+          }catch(e){ console.warn('Failed to merge returned product into local cache', e); }
         }catch(e){ console.warn('Reload after save failed', e); }
       }
       renderProducts(); renderDashboard(); closeProductForm();
