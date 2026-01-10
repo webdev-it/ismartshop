@@ -3,6 +3,14 @@
   const PRODUCTS_KEY = 'admin_products_v1';
   const CATS_KEY = 'admin_cats_v1';
   const USERS_KEY = 'ismart_users_v1';
+  
+  // Cache for products with TTL (5 min)
+  let productsCache = null;
+  let productsCacheTime = 0;
+  const CACHE_TTL = 5 * 60 * 1000;
+  
+  // Image cache for resized previews (prevent re-resizing)
+  const imagePreviewCache = new Map();
 
   // API base and helper (credentials included)
   const API_BASE = window.ISMART_API_BASE || '';
@@ -32,8 +40,14 @@
     }catch(e){ return null; }
   }
 
-  // load products from API or localStorage fallback
+  // load products from API or localStorage fallback (with caching)
   async function loadProducts(){
+    const now = Date.now();
+    // Return cached if still valid
+    if(productsCache && (now - productsCacheTime) < CACHE_TTL){
+      return productsCache;
+    }
+    
     const api = await tryApi('GET','/api/products');
     if(api) {
       try{
@@ -49,6 +63,9 @@
           colors: Array.isArray(p.colors) ? p.colors : [],
           status: String(p.status || 'approved')
         }));
+        // Update cache
+        productsCache = sanitized;
+        productsCacheTime = now;
         // Try to save to localStorage, but don't fail if quota exceeded
         try{
           localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
@@ -66,7 +83,12 @@
     if(s) {
       try{
         const parsed = JSON.parse(s);
-        return Array.isArray(parsed) ? parsed : [];
+        if(Array.isArray(parsed)){
+          productsCache = parsed;
+          productsCacheTime = now;
+          return parsed;
+        }
+        return [];
       }catch(e){
         console.warn('Failed to parse local products, clearing', e);
         localStorage.removeItem(PRODUCTS_KEY);
@@ -79,6 +101,9 @@
 
   async function saveProductsLocally(products){
     localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+    // Update cache
+    productsCache = products;
+    productsCacheTime = Date.now();
     // local saved; admin edits will try to save to API when possible (see form submit)
   }
 
@@ -236,7 +261,9 @@
 
   // Render a given products array into the admin list (no API fetch)
   function renderProductsList(products){
-    const list = $('#products-list'); list.innerHTML = '';
+    const list = $('#products-list'); 
+    list.innerHTML = '';
+    const frags = document.createDocumentFragment(); // batch DOM operations
     (products || []).forEach(p=>{
       try{
         if(!p || !p.id || !p.title) return; // skip invalid products
@@ -245,11 +272,12 @@
         const price = String(p.price || '');
         const category = String(p.category || '');
         el.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(price)} — ${escapeHtml(category)}</div><div class="admin-item-actions"><button data-id="${p.id}" class="edit-product">Edit</button><button data-id="${p.id}" class="del-product">Delete</button></div>`;
-        list.appendChild(el);
+        frags.appendChild(el);
       }catch(e){
         console.error('Failed to render product', p, e);
       }
     });
+    list.appendChild(frags); // single DOM insert for all items
     $all('.edit-product').forEach(b=> b.addEventListener('click', e=> openProductForm(e.target.dataset.id)));
     $all('.del-product').forEach(b=> b.addEventListener('click', async e=>{
       const id = e.target.dataset.id; if(!confirm('Удалить товар?')) return;
@@ -265,6 +293,17 @@
     }));
   }
 
+  // Filter products by search query (for search field)
+  function filterAndRenderProducts(products, searchQuery){
+    const filtered = products.filter(p => {
+      const title = String(p.title || '').toLowerCase();
+      const category = String(p.category || '').toLowerCase();
+      const query = String(searchQuery || '').toLowerCase();
+      return title.includes(query) || category.includes(query);
+    });
+    renderProductsList(filtered);
+  }
+
   async function openProductForm(id){
     const wrap = $('#product-form-wrap'); wrap.innerHTML = '';
     const products = await loadProducts();
@@ -278,13 +317,28 @@
       // create a resized preview (WebP if supported) from a dataURL or URL
       function createPreviewFromSrc(src, maxW = 1200, quality = 0.8){
         return new Promise((resolve)=>{
+          // Check cache first
+          const cacheKey = src.substring(0, 100) + '_' + maxW + '_' + quality;
+          if(imagePreviewCache.has(cacheKey)){
+            resolve(imagePreviewCache.get(cacheKey));
+            return;
+          }
+          
           const img = new Image(); img.crossOrigin = 'anonymous';
           img.onload = ()=>{
             const ratio = Math.min(1, maxW / img.width);
             const w = Math.round(img.width * ratio);
             const h = Math.round(img.height * ratio);
             const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); ctx.drawImage(img, 0,0, w, h);
-            try{ const webp = c.toDataURL('image/webp', quality); resolve(webp); }catch(e){ resolve(c.toDataURL('image/png')); }
+            try{ 
+              const webp = c.toDataURL('image/webp', quality); 
+              imagePreviewCache.set(cacheKey, webp);
+              resolve(webp); 
+            }catch(e){ 
+              const png = c.toDataURL('image/png');
+              imagePreviewCache.set(cacheKey, png);
+              resolve(png); 
+            }
           };
           img.onerror = ()=>{ resolve(src); };
           img.src = src;
@@ -586,9 +640,11 @@
   async function renderCategories(){
     const list = $('#categories-list'); list.innerHTML = '';
     const cats = await loadCategories();
+    const frags = document.createDocumentFragment();
     cats.forEach(c=>{
-      const el = document.createElement('div'); el.className='admin-item'; el.innerHTML = `<strong>${c.name}</strong><div class="admin-item-actions"><button data-id="${c.id}" class="edit-cat">Edit</button><button data-id="${c.id}" class="del-cat">Delete</button></div>`; list.appendChild(el);
+      const el = document.createElement('div'); el.className='admin-item'; el.innerHTML = `<strong>${c.name}</strong><div class="admin-item-actions"><button data-id="${c.id}" class="edit-cat">Edit</button><button data-id="${c.id}" class="del-cat">Delete</button></div>`; frags.appendChild(el);
     });
+    list.appendChild(frags);
     $all('.edit-cat').forEach(b=> b.addEventListener('click', e=> openCategoryForm(e.target.dataset.id)));
     $all('.del-cat').forEach(b=> b.addEventListener('click', async e=>{
       if(!confirm('Удалить категорию?')) return;
@@ -723,6 +779,21 @@
     enhanceAccessibility();
     // wire nav
     $all('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ showView(b.dataset.view); if(b.dataset.view==='products') renderProducts(); if(b.dataset.view==='categories') renderCategories(); if(b.dataset.view==='database'){ loadAdminDBInfo(); loadAdminUsers(); } }));
+    
+    // Setup products search
+    const searchInput = document.getElementById('products-search');
+    if(searchInput){
+      let searchTimeout = null;
+      searchInput.addEventListener('input', async (e)=>{
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async ()=>{
+          const query = e.target.value;
+          const products = await loadProducts();
+          filterAndRenderProducts(products, query);
+        }, 300);
+      });
+    }
+    
     $('#btn-refresh').addEventListener('click', ()=>{ renderDashboard(); renderProducts(); renderCategories(); loadAdminDBInfo(); loadAdminUsers(); });
     $('#btn-new-product').addEventListener('click', ()=> openProductForm());
     $('#btn-new-category').addEventListener('click', ()=> openCategoryForm());

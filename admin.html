@@ -71,13 +71,14 @@
 
       <section id="view-products" class="admin-view hidden">
         <h2>Товары</h2>
-            <div class="admin-panel-row">
-          <div class="panel-left">
-            <button id="btn-new-product" class="btn-primary" aria-label="Добавить товар">Добавить товар</button>
-            <div id="products-list"></div>
-          </div>
+        <div class="admin-panel-row">
           <div class="panel-right">
+            <button id="btn-new-product" class="btn-primary" aria-label="Добавить товар">Добавить товар</button>
             <div id="product-form-wrap"></div>
+          </div>
+          <div class="panel-left">
+            <input type="text" id="products-search" placeholder="Поиск по названию..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:var(--panel);color:var(--text);margin-bottom:12px;font-size:14px" />
+            <div id="products-list"></div>
           </div>
         </div>
       </section>

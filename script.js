@@ -15,6 +15,26 @@ function hideLoaderNow(){
 // start timer immediately so the loader always lasts ~3s
 setTimeout(hideLoaderNow, INITIAL_LOADER_MS);
 
+// Image lazy loading for main page (reduce initial bandwidth)
+function setupImageLazyLoading(){
+  try {
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          const img = entry.target;
+          if(img.dataset.src){
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            imageObserver.unobserve(img);
+          }
+        }
+      });
+    }, { rootMargin: '50px' });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => imageObserver.observe(img));
+  } catch(e) { /* no intersection observer support, skip */ }
+}
+
 // No client-side sample products — products are fetched from the server.
 // sampleProducts больше не используются — только серверные товары
 const sampleProducts = [];
@@ -78,9 +98,20 @@ async function apiFetch(path, opts = {}){
 }
 async function fetchProducts(){
   try{
+    // Check if cache is still fresh
+    const now = Date.now();
+    if(productsCache.length > 0 && (now - productsCacheTime) < PRODUCTS_CACHE_TTL){
+      console.log('[Cache] Using cached products');
+      return productsCache;
+    }
+    
     const res = await apiFetch('/api/products');
     if(!res.ok) throw new Error('no api');
-    return await res.json();
+    const data = await res.json();
+    
+    // Update cache time
+    productsCacheTime = now;
+    return data;
   }catch(e){
     return [];
   }
@@ -88,9 +119,20 @@ async function fetchProducts(){
 
 async function fetchCategories(){
   try{
+    // Check if cache is still fresh
+    const now = Date.now();
+    if(categoriesCache.length > 0 && (now - categoriesCacheTime) < CATEGORIES_CACHE_TTL){
+      console.log('[Cache] Using cached categories');
+      return categoriesCache;
+    }
+    
     const res = await apiFetch('/api/categories');
     if(!res.ok) throw new Error('no api');
-    return await res.json();
+    const data = await res.json();
+    
+    // Update cache time
+    categoriesCacheTime = now;
+    return data;
   }catch(e){
     // return empty categories if API unavailable
     return sampleCategories;
@@ -149,6 +191,12 @@ function showView(id){
 let productsCache = [];
 let categoriesCache = [];
 let currentProductId = null;
+
+// Cache with TTL (3 minutes for products, 10 min for categories)
+const PRODUCTS_CACHE_TTL = 3 * 60 * 1000;
+const CATEGORIES_CACHE_TTL = 10 * 60 * 1000;
+let productsCacheTime = 0;
+let categoriesCacheTime = 0;
 // Normalize products: ensure `images` array and numeric `priceNum`
 function normalizeProducts(list){
   return (list || []).map(p=>{
@@ -1006,6 +1054,11 @@ function renderProducts(products, searchQuery = ''){
   if(selectedCategory !== 'all'){
     filtered.sort((a,b)=> (b.priceNum || Number(b.price || 0)) - (a.priceNum || Number(a.price || 0)) );
   }
+  
+  // Use DocumentFragment for batch DOM operations (faster insertion)
+  const fragment = document.createDocumentFragment();
+  let adCount = 0;
+  
   filtered.forEach((p,i) => {
     const wrap = document.createElement('div');
     wrap.className = 'card-wrap';
@@ -1047,11 +1100,11 @@ function renderProducts(products, searchQuery = ''){
     `;
     card.querySelector('.image').appendChild(favBtn);
     wrap.appendChild(card);
-    el.appendChild(wrap);
+    fragment.appendChild(wrap);
     // staggered entrance
     setTimeout(()=> wrap.classList.add('entered'), 30 * i);
 
-    // Insert ads after every 18 products (после 18, 36, 54 и т.д.)
+    // Insert ads after every 18 products
     if((i + 1) % 18 === 0 && i + 1 < filtered.length){
       const adsSection = document.createElement('section');
       adsSection.className = 'ads-section';
@@ -1063,13 +1116,18 @@ function renderProducts(products, searchQuery = ''){
              data-ad-client="ca-pub-8729431037440255"
              data-ad-slot="9283745623"></ins>
       `;
-      el.appendChild(adsSection);
+      fragment.appendChild(adsSection);
+      adCount++;
       // Push ads script after adding element
       if(window.adsbygoogle){
         try{ (adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
       }
     }
   });
+  
+  // Single DOM append for entire fragment
+  el.appendChild(fragment);
+  
   // attach handlers after render
   attachBuyHandlers();
   attachFavoriteHandlers();
@@ -1078,6 +1136,8 @@ function renderProducts(products, searchQuery = ''){
 function renderCategories(categories){
   const el = document.getElementById('categories');
   el.innerHTML = '';
+  
+  const fragment = document.createDocumentFragment();
   categories.forEach(c =>{
     const b = document.createElement('button');
     b.className = 'pill' + (c.id===selectedCategory? ' active':'');
@@ -1099,8 +1159,9 @@ function renderCategories(categories){
       // re-render products with current search
       renderProducts(productsCache, currentSearchQuery);
     });
-    el.appendChild(b);
+    fragment.appendChild(b);
   });
+  el.appendChild(fragment); // Single DOM append for entire fragment
 }
 
 // Carousel controls
@@ -1238,6 +1299,9 @@ function onReady(fn){
 onReady(async function(){
   // initialize theme early to avoid flash
   setupThemeOnLoad();
+  
+  // Setup image lazy loading
+  setupImageLazyLoading();
   
   // fetch app config (Telegram contact, etc)
   await fetchConfig();
