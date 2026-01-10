@@ -197,6 +197,14 @@ const PRODUCTS_CACHE_TTL = 3 * 60 * 1000;
 const CATEGORIES_CACHE_TTL = 10 * 60 * 1000;
 let productsCacheTime = 0;
 let categoriesCacheTime = 0;
+
+// Lazy loading (infinite scroll) parameters
+const PRODUCTS_PER_PAGE = 12;
+let currentPage = 0;
+let allFilteredProducts = [];
+let isLoadingMore = false;
+let hasMoreProducts = true;
+let loadMoreObserver = null;
 // Normalize products: ensure `images` array and numeric `priceNum`
 function normalizeProducts(list){
   return (list || []).map(p=>{
@@ -974,11 +982,22 @@ function renderFavorites(products){
     `;
     // Safely add image with error handling
     const favImgWrap = card.querySelector('.image');
+    favImgWrap.classList.add('skeleton'); // Add skeleton loading state
     const favImg = document.createElement('img');
     favImg.alt = p.title || '';
     const favSrc = (Array.isArray(p.images) && p.images[0]) || p.image || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     favImg.src = favSrc;
-    favImg.onerror = ()=>{ favImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; favImg.style.opacity = '0.4'; };
+    // Handle image load
+    favImg.onload = () => {
+      favImgWrap.classList.remove('skeleton');
+      favImg.classList.add('loaded');
+    };
+    favImg.onerror = ()=>{ 
+      favImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; 
+      favImg.style.opacity = '0.4';
+      favImgWrap.classList.remove('skeleton');
+      favImg.classList.add('loaded');
+    };
     favImgWrap.appendChild(favImg);
     // favorite button (heart icon)
     const favBtn = document.createElement('button'); favBtn.className = 'fav-btn active'; favBtn.dataset.id = p.id; favBtn.innerHTML = `
@@ -1038,10 +1057,13 @@ async function renderProfile(){
   }
 }
 
-function renderProducts(products, searchQuery = ''){
-  const el = document.getElementById('products');
-  el.innerHTML = '';
-  // filter by selected category and search query
+function initializeInfiniteScroll(products, searchQuery = ''){
+  // Reset pagination state
+  currentPage = 0;
+  isLoadingMore = false;
+  hasMoreProducts = true;
+  
+  // Filter and sort products
   let filtered = products.filter(p => selectedCategory === 'all' ? true : p.category === selectedCategory);
   if(searchQuery.trim()){
     const query = searchQuery.toLowerCase().trim();
@@ -1050,16 +1072,37 @@ function renderProducts(products, searchQuery = ''){
       (p.description && p.description.toLowerCase().includes(query))
     );
   }
-  // If a specific category is selected, sort by price (high -> low)
   if(selectedCategory !== 'all'){
     filtered.sort((a,b)=> (b.priceNum || Number(b.price || 0)) - (a.priceNum || Number(a.price || 0)) );
   }
   
-  // Use DocumentFragment for batch DOM operations (faster insertion)
+  allFilteredProducts = filtered;
+  
+  // Clear products container
+  const el = document.getElementById('products');
+  el.innerHTML = '';
+  
+  // Load and render first page
+  loadMoreProducts();
+}
+
+function loadMoreProducts(){
+  if(isLoadingMore || !hasMoreProducts) return;
+  isLoadingMore = true;
+  
+  const el = document.getElementById('products');
+  const startIdx = currentPage * PRODUCTS_PER_PAGE;
+  const endIdx = startIdx + PRODUCTS_PER_PAGE;
+  const pageProducts = allFilteredProducts.slice(startIdx, endIdx);
+  
+  // Check if there are more products after this page
+  hasMoreProducts = endIdx < allFilteredProducts.length;
+  
   const fragment = document.createDocumentFragment();
   let adCount = 0;
   
-  filtered.forEach((p,i) => {
+  pageProducts.forEach((p, pageIdx) => {
+    const globalIdx = startIdx + pageIdx;
     const wrap = document.createElement('div');
     wrap.className = 'card-wrap';
     const card = document.createElement('article');
@@ -1077,6 +1120,7 @@ function renderProducts(products, searchQuery = ''){
     `;
     // create image element safely with error handling
     const imgWrap = card.querySelector('.image');
+    imgWrap.classList.add('skeleton'); // Add skeleton loading state
     const imgEl = document.createElement('img');
     imgEl.alt = p.title || '';
     // sanitize image src on client-side as an extra layer
@@ -1084,11 +1128,24 @@ function renderProducts(products, searchQuery = ''){
     if(!src || src === 'po' || src === '/po' || src.endsWith('/po')){
       imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
       imgEl.dataset.blocked = src;
+      // Still show the image immediately as it's transparent placeholder
+      imgWrap.classList.remove('skeleton');
+      imgEl.classList.add('loaded');
     } else {
       imgEl.src = src;
+      // Remove skeleton and add loaded class when image actually loads
+      imgEl.onload = () => {
+        imgWrap.classList.remove('skeleton');
+        imgEl.classList.add('loaded');
+      };
     }
     // Add error handler for failed image loads
-    imgEl.onerror = ()=>{ imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; imgEl.style.opacity = '0.4'; };
+    imgEl.onerror = ()=>{ 
+      imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; 
+      imgEl.style.opacity = '0.4';
+      imgWrap.classList.remove('skeleton');
+      imgEl.classList.add('loaded');
+    };
     imgWrap.appendChild(imgEl);
     // add favorite button overlay
     const favBtn = document.createElement('button');
@@ -1101,11 +1158,11 @@ function renderProducts(products, searchQuery = ''){
     card.querySelector('.image').appendChild(favBtn);
     wrap.appendChild(card);
     fragment.appendChild(wrap);
-    // staggered entrance
-    setTimeout(()=> wrap.classList.add('entered'), 30 * i);
+    // staggered entrance with adjusted delay
+    setTimeout(()=> wrap.classList.add('entered'), 30 * pageIdx);
 
-    // Insert ads after every 18 products
-    if((i + 1) % 18 === 0 && i + 1 < filtered.length){
+    // Insert ads after every 18 products globally
+    if((globalIdx + 1) % 18 === 0 && globalIdx + 1 < allFilteredProducts.length){
       const adsSection = document.createElement('section');
       adsSection.className = 'ads-section';
       adsSection.innerHTML = `
@@ -1125,6 +1182,14 @@ function renderProducts(products, searchQuery = ''){
     }
   });
   
+  // Add sentinel element at the end for intersection observer
+  if(hasMoreProducts){
+    const sentinel = document.createElement('div');
+    sentinel.className = 'load-more-sentinel';
+    sentinel.style.height = '100px';
+    fragment.appendChild(sentinel);
+  }
+  
   // Single DOM append for entire fragment
   el.appendChild(fragment);
   
@@ -1132,7 +1197,43 @@ function renderProducts(products, searchQuery = ''){
   attachBuyHandlers();
   attachFavoriteHandlers();
   attachCardHandlers();
+  
+  // Setup intersection observer for the sentinel
+  if(hasMoreProducts){
+    setupLoadMoreObserver();
+  }
+  
+  currentPage++;
+  isLoadingMore = false;
 }
+
+function setupLoadMoreObserver(){
+  // Clean up old observer
+  if(loadMoreObserver){
+    loadMoreObserver.disconnect();
+  }
+  
+  const sentinel = document.querySelector('.load-more-sentinel');
+  if(!sentinel) return;
+  
+  loadMoreObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting && hasMoreProducts && !isLoadingMore){
+        loadMoreProducts();
+      }
+    });
+  }, {
+    rootMargin: '200px',
+    threshold: 0
+  });
+  
+  loadMoreObserver.observe(sentinel);
+}
+
+function renderProducts(products, searchQuery = ''){
+  initializeInfiniteScroll(products, searchQuery);
+}
+
 function renderCategories(categories){
   const el = document.getElementById('categories');
   el.innerHTML = '';
