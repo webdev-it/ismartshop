@@ -49,7 +49,14 @@
           colors: Array.isArray(p.colors) ? p.colors : [],
           status: String(p.status || 'approved')
         }));
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
+        // Try to save to localStorage, but don't fail if quota exceeded
+        try{
+          localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
+        }catch(quotaErr){
+          console.warn('localStorage quota exceeded, working without cache', quotaErr.message);
+          // clear old cache to free space
+          try{ localStorage.removeItem(PRODUCTS_KEY); }catch(e){}
+        }
         return sanitized;
       }catch(e){
         console.error('Error processing products from API:', e);
@@ -628,6 +635,13 @@
     alert('Таблица пользователей очищена'); loadAdminUsers(); loadAdminDBInfo(); renderDashboard();
   }
 
+  async function doDbTruncateProducts(){
+    if(!confirm('Вы уверены? Все товары будут удалены. Эта операция необратима.')) return;
+    const res = await tryApi('POST','/admin/db/truncate-products', { confirm: true });
+    if(!res) return alert('Операция не удалась');
+    alert('Все товары удалены'); localStorage.removeItem(PRODUCTS_KEY); renderProducts(); renderDashboard();
+  }
+
   async function doDbBackup(){
     const res = await tryApi('POST','/admin/db/backup-json');
     if(!res) return alert('Бэкап не выполнен');
@@ -717,6 +731,7 @@
     // DB action bindings
     $('#db-refresh-users')?.addEventListener('click', ()=> loadAdminUsers());
     $('#db-truncate-users')?.addEventListener('click', ()=> doDbTruncate());
+    $('#db-truncate-products')?.addEventListener('click', ()=> doDbTruncateProducts());
     $('#db-backup-json')?.addEventListener('click', ()=> doDbBackup());
     $('#db-vacuum')?.addEventListener('click', ()=> doDbVacuum());
     $('#db-exec-sql')?.addEventListener('click', ()=> doDbExecSql());
