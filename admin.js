@@ -36,13 +36,30 @@
   async function loadProducts(){
     const api = await tryApi('GET','/api/products');
     if(api) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(api));
-      return api;
+      try{
+        // sanitize products: ensure they're objects with valid data
+        const sanitized = (Array.isArray(api) ? api : []).filter(p => p && typeof p === 'object').map(p => ({
+          id: String(p.id || Date.now()),
+          title: String(p.title || 'Unnamed'),
+          price: String(p.price || '0'),
+          category: String(p.category || ''),
+          description: String(p.description || ''),
+          images: Array.isArray(p.images) ? p.images : [],
+          image: String(p.image || ''),
+          colors: Array.isArray(p.colors) ? p.colors : [],
+          status: String(p.status || 'approved')
+        }));
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
+        return sanitized;
+      }catch(e){
+        console.error('Error processing products from API:', e);
+      }
     }
     const s = localStorage.getItem(PRODUCTS_KEY);
     if(s) {
       try{
-        return JSON.parse(s);
+        const parsed = JSON.parse(s);
+        return Array.isArray(parsed) ? parsed : [];
       }catch(e){
         console.warn('Failed to parse local products, clearing', e);
         localStorage.removeItem(PRODUCTS_KEY);
@@ -194,10 +211,15 @@
   async function initAfterAuth(){
     // default view after successful auth
     showView('dashboard');
-    await renderDashboard();
-    await renderProducts();
-    await renderCategories();
-    const h = await tryApi('GET','/api/health'); $('#admin-status-text').textContent = h? 'online' : 'offline';
+    try{ await renderDashboard(); }catch(e){ console.error('Error rendering dashboard:', e); }
+    try{ await renderProducts(); }catch(e){ console.error('Error rendering products:', e); }
+    try{ await renderCategories(); }catch(e){ console.error('Error rendering categories:', e); }
+    try{
+      const h = await tryApi('GET','/api/health'); 
+      $('#admin-status-text').textContent = h? 'online' : 'offline';
+    }catch(e){
+      $('#admin-status-text').textContent = 'offline';
+    }
   }
 
   async function renderProducts(){
@@ -209,9 +231,17 @@
   function renderProductsList(products){
     const list = $('#products-list'); list.innerHTML = '';
     (products || []).forEach(p=>{
-      const el = document.createElement('div'); el.className = 'admin-item';
-      el.innerHTML = `<strong>${p.title}</strong><div>${p.price} — ${p.category}</div><div class="admin-item-actions"><button data-id="${p.id}" class="edit-product">Edit</button><button data-id="${p.id}" class="del-product">Delete</button></div>`;
-      list.appendChild(el);
+      try{
+        if(!p || !p.id || !p.title) return; // skip invalid products
+        const el = document.createElement('div'); el.className = 'admin-item';
+        const title = String(p.title || '').substring(0, 100);
+        const price = String(p.price || '');
+        const category = String(p.category || '');
+        el.innerHTML = `<strong>${escapeHtml(title)}</strong><div>${escapeHtml(price)} — ${escapeHtml(category)}</div><div class="admin-item-actions"><button data-id="${p.id}" class="edit-product">Edit</button><button data-id="${p.id}" class="del-product">Delete</button></div>`;
+        list.appendChild(el);
+      }catch(e){
+        console.error('Failed to render product', p, e);
+      }
     });
     $all('.edit-product').forEach(b=> b.addEventListener('click', e=> openProductForm(e.target.dataset.id)));
     $all('.del-product').forEach(b=> b.addEventListener('click', async e=>{
