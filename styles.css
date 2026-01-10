@@ -495,51 +495,97 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 }
 
 
-/* 1. Сначала добавим настройки цветов для темы */
+/* --- ЕДИНЫЙ БЛОК ИСПРАВЛЕНИЙ КАРТОЧЕК --- */
+
+/* 1. Настройка переменных цветов для всей страницы */
 :root {
   --card-bg: #ffffff;
   --card-text: #111111;
+  --card-shadow: rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] {
-  --card-bg: #1c1c1e;
-  --card-text: #ffffff;
+  --card-bg: #1c1c1e; /* Темный фон карточки */
+  --card-text: #ffffff; /* Белый текст */
+  --card-shadow: rgba(0, 0, 0, 0.4);
 }
 
-/* 2. Твой код для исправления карточек */
+/* 2. Сама карточка: убираем двойные рамки и делаем её цельной */
 .article.card {
   background: var(--card-bg) !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+  color: var(--card-text) !important;
   border-radius: 20px !important;
+  padding: 0 !important; 
+  overflow: hidden !important; 
   border: none !important;
   display: flex !important;
   flex-direction: column !important;
+  box-shadow: 0 4px 15px var(--card-shadow) !important;
+  min-height: auto !important;
 }
 
+/* 3. Картинка: уменьшаем высоту и убираем лишние отступы */
+.article.card .image {
+  width: 100% !important;
+  height: 160px !important; /* Уменьшенная высота */
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: #fdfdfd !important; /* Светлая подложка под фото */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.article.card .image img {
+  max-height: 90% !important;
+  width: auto !important;
+  object-fit: contain !important;
+}
+
+/* 4. Блок с текстом: убираем лишние фоны и исправляем цвета */
 .card-footer, .footer, .card-info {
   background: transparent !important;
   padding: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
 }
 
 .price {
   background: transparent !important;
-  color: #ff007a !important; /* Розовый цвет */
+  color: #ff007a !important; /* Розовый цвет цены */
   font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  padding: 0 !important;
 }
 
 .title {
-  color: var(--card-text) !important;
+  color: var(--card-text) !important; /* Текст станет белым в темной теме */
   background: transparent !important;
+  font-size: 14px !important;
+  margin: 4px 0 !important;
+  line-height: 1.2 !important;
 }
 
-/* Убираем лишние закругления у картинки, чтобы она была вплотную к краям */
-.article.card .image {
-  margin: 0 !important;
-  border-radius: 0 !important;
-}
-
-.article.card .image img {
+/* 5. Кнопка "Купить": исправляем видимость в темной теме */
+.article.card .buy {
   width: 100% !important;
-  display: block !important;
+  margin-top: 8px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  
+  /* В светлой теме - черная кнопка с белым текстом */
+  background: #111111 !important;
+  color: #ffffff !important;
 }
+
+/* В темной теме - белая кнопка с черным текстом */
+[data-theme="dark"] .article.card .buy {
+  background: #ffffff !important;
+  color: #111111 !important;
+}
+
+/* --- КОНЕЦ БЛОКА --- */
