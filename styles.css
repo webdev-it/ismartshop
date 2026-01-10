@@ -210,7 +210,7 @@ body{
 /* Responsive adjustments */
 @media (max-width:360px){
   .carousel-wrap{height:160px}
-  .card .image{height:240px}
+  .card .image{height:180px}
   .brand{font-size:24px}
 }
 @media (min-width:720px){
@@ -226,7 +226,7 @@ body{
 }
 .card-surface{position:relative;border-radius:0;overflow:hidden;background:transparent;box-shadow:none;z-index:2;display:flex;flex-direction:column;height:100%}
 .card .image{height:320px;background:rgba(240,240,240,0.5);overflow:hidden;z-index:3;flex-shrink:0}
-.card .image img{width:100%;height:100%;object-fit:cover;display:block}
+.card .image img{width:100%;height:100%;object-fit:cover;display:block;border-radius:20px;}
 .card .footer{background:transparent;padding:16px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;z-index:4;flex-grow:1;justify-content:flex-start}
 .price{font-weight:800;font-size:24px;color:#ff1493;margin-bottom:4px}
 .title{color:var(--muted);margin:0;font-size:15px;line-height:1.4;word-break:break-word}
@@ -492,4 +492,5 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
   display:block !important;
   width:100%;
   max-width:100%;
+
 }
