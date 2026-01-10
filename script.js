@@ -971,13 +971,11 @@ function renderFavorites(products){
     const card = document.createElement('article'); card.className = 'card';
     card.dataset.id = p.id;
     card.innerHTML = `
-      <div class="card-surface">
-        <div class="image"></div>
-        <div class="footer">
-          <div class="price">${formatPrice(p.price)}</div>
-          <div class="title">${p.title}</div>
-          <button class="buy">Купить</button>
-        </div>
+      <div class="image"></div>
+      <div class="footer">
+        <div class="price">${formatPrice(p.price)}</div>
+        <div class="title">${p.title}</div>
+        <button class="buy">Купить</button>
       </div>
     `;
     // Safely add image with error handling
@@ -1109,13 +1107,11 @@ function loadMoreProducts(){
     card.className = 'card';
     card.dataset.id = p.id;
     card.innerHTML = `
-      <div class="card-surface">
-        <div class="image"></div>
-        <div class="footer">
-          <div class="price">${formatPrice(p.price)}</div>
-          <div class="title">${p.title}</div>
-          <button class="buy">Купить</button>
-        </div>
+      <div class="image"></div>
+      <div class="footer">
+        <div class="price">${formatPrice(p.price)}</div>
+        <div class="title">${p.title}</div>
+        <button class="buy">Купить</button>
       </div>
     `;
     // create image element safely with error handling
