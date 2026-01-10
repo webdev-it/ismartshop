@@ -337,7 +337,7 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 .product-body{padding:18px 16px 20px}
 .product-price{font-weight:800;font-size:20px;margin-bottom:8px}
 .product-title{font-size:16px;margin-bottom:10px;color:var(--text)}
-.product-desc{color:var(--muted);opacity:0.95;margin-bottom:12px;line-height:1.5}
+.product-desc{color:var(--muted);opacity:0.95;margin-bottom:12px;line-height:1.5; white-space: pre-wrap}
 .product-colors{font-size:14px;color:var(--muted);margin-bottom:18px}
 .product-actions{display:flex;gap:12px}
 .fav-pill{flex:1;padding:12px;border-radius:28px;border:0;background:linear-gradient(180deg, #e9e9ec, #dcdde0);color:#111;font-weight:700;cursor:pointer}
@@ -444,3 +444,22 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 .verify-modal.open{background:rgba(0,0,0,0.22)}
 .verify-modal .auth-card{opacity:0;transform:translateY(10px) scale(0.985);transition:transform 260ms cubic-bezier(.2,.9,.3,1),opacity 240ms ease}
 .verify-modal.open .auth-card{opacity:1;transform:none}
+/* Google AdSense styles */
+.ads-section{
+  margin:20px 0;
+  padding:16px;
+  border-radius:12px;
+  background:var(--card-white);
+  box-shadow:0 2px 8px var(--surface-shadow);
+  text-align:center;
+  min-height:250px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.ads-section ins.adsbygoogle{
+  display:block !important;
+  width:100%;
+  max-width:100%;
+}

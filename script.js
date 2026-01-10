@@ -1050,6 +1050,25 @@ function renderProducts(products, searchQuery = ''){
     el.appendChild(wrap);
     // staggered entrance
     setTimeout(()=> wrap.classList.add('entered'), 30 * i);
+
+    // Insert ads after every 18 products (после 18, 36, 54 и т.д.)
+    if((i + 1) % 18 === 0 && i + 1 < filtered.length){
+      const adsSection = document.createElement('section');
+      adsSection.className = 'ads-section';
+      adsSection.innerHTML = `
+        <ins class="adsbygoogle"
+             style="display:block; text-align:center;"
+             data-ad-layout="in-article"
+             data-ad-format="fluid"
+             data-ad-client="ca-pub-8729431037440255"
+             data-ad-slot="9283745623"></ins>
+      `;
+      el.appendChild(adsSection);
+      // Push ads script after adding element
+      if(window.adsbygoogle){
+        try{ (adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
+      }
+    }
   });
   // attach handlers after render
   attachBuyHandlers();

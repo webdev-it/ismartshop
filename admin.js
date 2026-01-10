@@ -40,7 +40,15 @@
       return api;
     }
     const s = localStorage.getItem(PRODUCTS_KEY);
-    if(s) return JSON.parse(s);
+    if(s) {
+      try{
+        return JSON.parse(s);
+      }catch(e){
+        console.warn('Failed to parse local products, clearing', e);
+        localStorage.removeItem(PRODUCTS_KEY);
+        return [];
+      }
+    }
     // no data available
     return [];
   }
@@ -53,7 +61,16 @@
   async function loadCategories(){
     const api = await tryApi('GET','/api/categories');
     if(api){ localStorage.setItem(CATS_KEY, JSON.stringify(api)); return api; }
-    const s = localStorage.getItem(CATS_KEY); if(s) return JSON.parse(s);
+    const s = localStorage.getItem(CATS_KEY); 
+    if(s) {
+      try{
+        return JSON.parse(s);
+      }catch(e){
+        console.warn('Failed to parse local categories, clearing', e);
+        localStorage.removeItem(CATS_KEY);
+        return [];
+      }
+    }
     return [];
   }
 
