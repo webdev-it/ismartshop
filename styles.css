@@ -495,9 +495,12 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 }
 
 
-/* --- ЕДИНЫЙ БЛОК ИСПРАВЛЕНИЙ КАРТОЧЕК --- */
 
-/* 1. Настройка переменных цветов для всей страницы */
+/* ============================================================
+   ФИНАЛЬНЫЙ ВАРИАНТ: КВАДРАТНАЯ КАРТИНКА И БЕЛАЯ КНОПКА
+   ============================================================ */
+
+/* 1. Настройка цветов для темы */
 :root {
   --card-bg: #ffffff;
   --card-text: #111111;
@@ -505,87 +508,105 @@ body:has(#view-profile:not([style*="display:none"])) .jivochat-container {
 }
 
 [data-theme="dark"] {
-  --card-bg: #1c1c1e; /* Темный фон карточки */
-  --card-text: #ffffff; /* Белый текст */
+  --card-bg: #1c1c1e;
+  --card-text: #ffffff;
   --card-shadow: rgba(0, 0, 0, 0.4);
 }
 
-/* 2. Сама карточка: убираем двойные рамки и делаем её цельной */
+/* 2. Контейнер карточки */
 .article.card {
   background: var(--card-bg) !important;
   color: var(--card-text) !important;
   border-radius: 20px !important;
-  padding: 0 !important; 
-  overflow: hidden !important; 
+  padding: 0 !important;
+  overflow: hidden !important;
   border: none !important;
   display: flex !important;
   flex-direction: column !important;
   box-shadow: 0 4px 15px var(--card-shadow) !important;
-  min-height: auto !important;
+  margin: 0 !important;
+  height: 100% !important;
 }
 
-/* 3. Картинка: уменьшаем высоту и убираем лишние отступы */
+/* 3. Квадратная картинка без отступов */
 .article.card .image {
   width: 100% !important;
-  height: 160px !important; /* Уменьшенная высота */
+  aspect-ratio: 1 / 1 !important; /* Делает блок идеально квадратным */
   margin: 0 !important;
+  padding: 0 !important;
   border-radius: 0 !important;
-  background: #fdfdfd !important; /* Светлая подложка под фото */
+  background: #ffffff !important; 
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  overflow: hidden !important;
 }
 
 .article.card .image img {
-  max-height: 90% !important;
-  width: auto !important;
-  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important; /* Товар вписывается целиком, не обрезаясь */
+  display: block !important;
 }
 
-/* 4. Блок с текстом: убираем лишние фоны и исправляем цвета */
-.card-footer, .footer, .card-info {
+/* 4. Информация под картинкой */
+.card-info {
   background: transparent !important;
-  padding: 12px !important;
+  padding: 10px 12px 12px 12px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 4px !important;
+  flex-grow: 1 !important;
 }
 
-.price {
+/* Цена */
+.card-info .price {
   background: transparent !important;
-  color: #ff007a !important; /* Розовый цвет цены */
-  font-weight: 700 !important;
+  color: #ff007a !important;
+  font-weight: 800 !important;
   font-size: 1.1rem !important;
-  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.title {
-  color: var(--card-text) !important; /* Текст станет белым в темной теме */
+/* Название (меняет цвет) */
+.card-info .title {
+  color: var(--card-text) !important;
   background: transparent !important;
-  font-size: 14px !important;
-  margin: 4px 0 !important;
+  font-size: 13px !important;
   line-height: 1.2 !important;
+  margin: 4px 0 8px 0 !important;
+  min-height: 32px !important; /* Высота под 2 строки текста */
+  overflow: hidden !important;
 }
 
-/* 5. Кнопка "Купить": исправляем видимость в темной теме */
+/* 5. Кнопка: ВСЕГДА белая, черный текст, во всю ширину */
 .article.card .buy {
   width: 100% !important;
-  margin-top: 8px !important;
-  padding: 10px !important;
+  margin-top: auto !important; /* Прижать к низу */
+  padding: 12px !important;
   border-radius: 12px !important;
-  border: none !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
   
-  /* В светлой теме - черная кнопка с белым текстом */
-  background: #111111 !important;
-  color: #ffffff !important;
-}
-
-/* В темной теме - белая кнопка с черным текстом */
-[data-theme="dark"] .article.card .buy {
   background: #ffffff !important;
-  color: #111111 !important;
+  color: #000000 !important;
+  
+  /* Тонкая рамка для видимости на белом фоне */
+  border: 1px solid rgba(0,0,0,0.1) !important; 
+  
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
 }
 
-/* --- КОНЕЦ БЛОКА --- */
+/* Эффект при нажатии */
+.article.card .buy:active {
+  transform: scale(0.98) !important;
+  background: #f7f7f7 !important;
+}
+
+/* Скрытие старых элементов */
+.card-footer, .footer {
+  display: none !important;
+}
+
