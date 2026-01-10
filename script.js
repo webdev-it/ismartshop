@@ -971,13 +971,16 @@ function renderFavorites(products){
     const card = document.createElement('article'); card.className = 'card';
     card.dataset.id = p.id;
     card.innerHTML = `
-      <div class="image"></div>
-      <div class="footer">
-        <div class="price">${formatPrice(p.price)}</div>
-        <div class="title">${p.title}</div>
-        <button class="buy">Купить</button>
-      </div>
-    `;
+  <div class="image">
+    ${p.images && p.images[0] ? `<img src="${p.images[0]}" alt="${p.title}">` : ''}
+  </div>
+  <div class="card-info">
+    <div class="price">${formatPrice(p.price)}</div>
+    <div class="title">${p.title}</div>
+    <button class="buy">Купить</button>
+  </div>
+`;
+
     // Safely add image with error handling
     const favImgWrap = card.querySelector('.image');
     favImgWrap.classList.add('skeleton'); // Add skeleton loading state
@@ -1464,3 +1467,4 @@ onReady(async function(){
     });
   }
 });
+
