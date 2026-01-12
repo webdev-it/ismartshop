@@ -2,193 +2,289 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="iSmartShop — онлайн-магазин цифровой техники в Южно‑Сахалинске. iPhone, Samsung, MacBook и аксессуары.">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta name="description" content="iSmartShop — онлайн-магазин iPhone, Samsung, MacBook и аксессуаров. Купить смартфон по выгодной цене с доставкой.">
   <meta name="google-adsense-account" content="ca-pub-8729431037440255">
+
+
+  
+  
+
   <!-- Favicon -->
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
 
-  <title>iSmartShop — Магазин цифровой техники</title>
-  <link rel="stylesheet" href="src/css/app.css" />
+
+
+  <title>iSmartShop — Магазин цифровой техники в Южно-Сахалинске</title>
+  <link rel="stylesheet" href="styles.css" />
   <script>
     // Backend API base (deployed on Render)
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
   </script>
+  <script>
+    // Early sanitizer to block suspicious image src values (runs before body parsing completes)
+    (function(){
+      try{
+        const blockIfSuspicious = (src)=>{
+          if(!src) return false;
+          const s = String(src).trim();
+          return s === '/po' || s === 'po' || s.endsWith('/po');
+        };
 
+        // Override HTMLImageElement.src setter to block JS assignments
+        const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+        if(desc && desc.set){
+          Object.defineProperty(HTMLImageElement.prototype, 'src', {
+            set(v){ try{ if(blockIfSuspicious(v)){ console.warn('Blocked image.src assignment', v); return; } }catch(e){}
+              return desc.set.call(this, v);
+            },
+            get(){ return desc.get.call(this); },
+            configurable: true
+          });
+        }
+
+        // MutationObserver to sanitize images inserted into DOM during parsing
+        const observer = new MutationObserver((recs)=>{
+          for(const rec of recs){
+            for(const node of rec.addedNodes || []){
+              if(node && node.tagName === 'IMG'){
+                try{ const src = node.getAttribute('src') || node.getAttribute('data-src') || ''; if(blockIfSuspicious(src)){ node.removeAttribute('src'); node.dataset.blocked = src; console.warn('Removed suspicious img src at parse time', src); } }catch(e){}
+              }
+            }
+            if(rec.type === 'attributes' && rec.target && rec.target.tagName === 'IMG'){
+              try{ const src = rec.target.getAttribute('src') || ''; if(blockIfSuspicious(src)){ rec.target.removeAttribute('src'); rec.target.dataset.blocked = src; console.warn('Removed suspicious img src (attr change)', src); } }catch(e){}
+            }
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter:['src'] });
+      }catch(e){/* ignore */}
+    })();
+  </script>
   <!-- JivoSite chat widget -->
   <script src="//code.jivo.ru/widget/Z8QiHSnb6N" async></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8729431037440255"
      crossorigin="anonymous"></script>
 </head>
-<body data-page="home">
-  <a class="skip" href="#content">Перейти к контенту</a>
+<body class="loading">
+  <!-- Loading overlay shown on first open. Hides after 3s. -->
+  <div id="loader" class="loader" role="status" aria-label="Загрузка">
+    <div class="loader-inner">
+      <img src="assets/images/logo.png" alt="iSmartShop" class="loader-logo" />
+    </div>
+  </div>
 
-  <div class="site">
-    <header class="header" role="banner">
-      <div class="container header-inner">
-        <a class="brand" href="index.html" aria-label="iSmartShop">
-          <span class="brand-mark" aria-hidden="true"><img src="assets/images/logo.png" alt="" /></span>
-          <span>
-            <div class="brand-title">iSmartShop</div>
-            <div class="brand-sub">Цифровая техника • Южно‑Сахалинск</div>
-          </span>
-        </a>
-
-        <nav class="nav" aria-label="Навигация">
-          <a href="index.html" data-nav="home" aria-current="page">Каталог</a>
-          <a href="favorites.html" data-nav="favorites">Избранное</a>
-          <a href="profile.html" data-nav="profile">Профиль</a>
-          <a href="contacts.html" data-nav="contacts">Контакты</a>
-          <a href="admin.html" data-nav="admin">Админ</a>
-        </nav>
-
-        <div class="actions">
-          <button class="btn" type="button" data-login onclick="window.ISMART_OPEN_LOGIN && window.ISMART_OPEN_LOGIN()">Войти</button>
-          <button class="btn ghost" type="button" data-theme-toggle aria-label="Тема">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 19v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.22 4.22l1.42 1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.36 18.36l1.42 1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M1 12h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 12h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.22 19.78l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
-            Тема
-          </button>
-        </div>
-      </div>
+  <div class="app">
+    <header class="top">
+      <div class="spacer"></div>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Переключить тему">
+          <!-- sun/moon icon (will be toggled via JS) -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 19v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.22 4.22l1.42 1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.36 18.36l1.42 1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.22 19.78l1.42-1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="brand logo-placeholder" id="brand"><img src="assets/images/logo.png" alt="logo" width="50%" height="auto"></div>
     </header>
 
-    <main id="content" class="main" role="main">
-      <div class="container">
-        <section class="hero" aria-label="Каталог">
-          <div class="hero-inner">
-            <div>
-              <h1>Техника, которая выглядит дорого — и работает быстро.</h1>
-              <p>Обновлённый дизайн и новая архитектура фронтенда: модульный JS, единый UI‑kit, быстрый каталог. Бэкенд не трогали.</p>
-
-              <div class="searchbar" role="search">
-                <input id="search" class="input" placeholder="Поиск по названию или описанию…" autocomplete="off" />
-                <button class="btn" type="button" data-quick-all>
-                  Сброс
-                </button>
-              </div>
-
-              <div class="pills" id="categories" aria-label="Категории">
-                <!-- injected -->
-              </div>
-            </div>
-
-            <aside class="hero-card" aria-label="Сервис">
-              <div style="font-weight:900;font-size:14px;letter-spacing:-0.01em;">Почему iSmartShop</div>
-              <div style="margin-top:10px;color:var(--muted);font-size:13px;line-height:1.6;">
-                • Быстрый подбор <span class="kbd">поиск</span><br>
-                • Избранное на устройстве<br>
-                • Покупка через Telegram
-              </div>
-
-              <div id="hero-carousel" class="carousel" aria-label="Витрина">
-                <div class="frame">
-                  <img id="hero-carousel-img" src="" alt="" loading="lazy" />
-                  <div class="nav" aria-hidden="false">
-                    <button class="btn ghost" type="button" data-carousel-prev aria-label="Назад">‹</button>
-                    <button class="btn ghost" type="button" data-carousel-next aria-label="Вперёд">›</button>
-                  </div>
-                </div>
-                <div id="hero-carousel-dots" class="dots" aria-label="Слайды"></div>
-              </div>
-
-              <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-                <a class="btn primary" href="contacts.html">Контакты</a>
-                <a class="btn" href="admin.html">Админ</a>
-              </div>
-            </aside>
-          </div>
-        </section>
-
-        <section class="section" aria-label="Товары">
-          <div class="section-head">
-            <div>
-              <h2 class="section-title">Каталог</h2>
-              <p class="section-sub">Данные подгружаются из API: <span class="kbd">/api/products</span></p>
-            </div>
-          </div>
-          <div class="grid" id="products" aria-live="polite"></div>
-        </section>
+    <div class="search-row">
+      <div class="search-wrap">
+        <input class="search" placeholder="Поиск" id="search" />
       </div>
+      <button class="voice" aria-label="search">
+        <!-- right-side loupe icon -->
+        <svg viewBox="0 0 24 24" class="icon loupe" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="#111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" stroke="#111" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
+    </div>
+
+    <main class="content" id="view-home" data-view>
+      <section class="carousel-wrap">
+        <button class="carousel-btn left" id="prev" aria-label="prev">
+          <svg viewBox="0 0 24 24" class="icon arrow"><path d="M15 6l-6 6 6 6" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </button>
+        <div class="carousel" id="carousel">
+          <div class="slide"><img src="assets/images/iphone17pro.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/iphoneair.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/iphone17.jpg" alt="slide" /></div>
+          <div class="slide"><img src="assets/images/airpods.jpg" alt="slide" /></div>
+        </div>
+        <button class="carousel-btn right" id="next" aria-label="next">
+          <svg viewBox="0 0 24 24" class="icon arrow"><path d="M9 6l6 6-6 6" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </button>
+        <div class="dots" id="dots"></div>
+      </section>
+
+        <!-- Categories: loaded from server (or fallback sample). Click to filter products -->
+        <section class="categories-wrap">
+          <div class="categories" id="categories">
+            <!-- pills will be injected by script.js -->
+          </div>
+        </section>
+
+      <section class="grid" id="products">
+        <!-- product cards will be injected here by script.js -->
+      </section>
+      
     </main>
 
-    <footer class="footer" role="contentinfo">
-      <div class="container footer-grid">
-        <div>
-          <div style="font-weight:900;color:var(--text)">iSmartShop</div>
-          <div style="margin-top:6px">© <span id="year">2026</span>. Все права защищены.</div>
-        </div>
-        <div class="footer-links">
-          <a href="contacts.html">Контакты</a>
-          <a href="terms.html">Условия</a>
-          <a href="privacy.html">Политика</a>
-        </div>
-      </div>
-    </footer>
-  </div>
+    <!-- Favorites view (placeholder) -->
+    <main class="content" id="view-favorites" data-view style="display:none">
+      <div class="favorites-header"><button class="favorites-pill">Избранные</button></div>
+      <section class="grid" id="favorites">
+        <!-- favorites will be injected here -->
+      </section>
+    </main>
 
-  <div id="dialog-backdrop" class="dialog-backdrop" data-open="false">
-    <div id="dialog" class="dialog" role="dialog" aria-modal="true" aria-label="Товар">
-      <div class="dialog-inner">
-        <div class="dialog-media"><img id="dialog-img" src="" alt="" /></div>
-        <div class="dialog-body">
-          <div class="dialog-top">
-            <div>
-              <div id="dialog-price" class="price"></div>
-              <h3 id="dialog-title" class="dialog-title"></h3>
+    <!-- Profile view -->
+    <main class="content" id="view-profile" data-view style="display:none">
+      <section class="profile-wrap">
+        <div class="profile-header">
+          <button class="pill big">Профиль</button>
+        </div>
+        <div class="profile-content" id="profile-content">
+          <div class="profile-info">
+            <div class="profile-field">
+              <label>Имя:</label>
+              <div id="profile-name" class="profile-value">-</div>
             </div>
-            <button class="dialog-close" type="button" data-dialog-close aria-label="Закрыть">✕</button>
+            <div class="profile-field">
+              <label>Email:</label>
+              <div id="profile-email" class="profile-value">-</div>
+            </div>
+            <div class="profile-field">
+              <label>Роль:</label>
+              <div id="profile-role" class="profile-value">-</div>
+            </div>
           </div>
-          <p id="dialog-desc" class="desc" style="line-clamp: unset; -webkit-line-clamp: unset"></p>
-          <div id="dialog-colors" class="colors" aria-label="Цвета"></div>
-          <div style="display:flex;gap:10px;margin-top:auto;">
-            <button id="dialog-fav" class="btn" type="button">В избранное</button>
-            <button id="dialog-buy" class="btn primary" type="button">Купить</button>
+          <button id="profile-logout" class="logout-btn">Выход</button>
+        </div>
+      </section>
+    </main>
+
+    <main class="content" id="view-product" data-view role="dialog" aria-modal="true" style="display:none">
+      <section class="product-wrap">
+        <div class="product-card">
+          <button id="product-close" class="icon-btn" aria-label="back">‹</button>
+          <div class="product-image"><img id="product-img" src="" alt="product" /></div>
+          <div class="product-body">
+            <div class="product-price" id="product-price"></div>
+            <div class="product-title" id="product-title"></div>
+            <div class="product-desc" id="product-desc"></div>
+            <div class="product-colors" id="product-colors"></div>
+            <div class="product-actions">
+              <button id="product-fav" class="fav-pill">В избранные</button>
+              <button id="product-buy" class="buy-pill">Купить</button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab" data-tab="view-favorites" aria-label="Избранные">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M12 21s-7-4.6-9-7.2C1 10.2 3.2 6 7 6c2 0 3.5 1.3 5 3 1.5-1.7 3-3 5-3 3.8 0 6 4.2 4 7.8-2 2.6-9 7.2-9 7.2z"/></svg>
+        <span>Избранные</span>
+      </button>
+      <button class="tab active" data-tab="view-home" aria-label="Главная">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M3 7h18v13H3z"/><path d="M3 7l9-4 9 4"/></svg>
+        <span>Главная</span>
+      </button>
+      <button class="tab" data-tab="view-profile" aria-label="Профиль">
+        <svg viewBox="0 0 24 24" class="icon tab-icon" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </button>
+    </nav>
   </div>
 
-  <div id="toast" class="toast" data-open="false" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
 
-  <div id="loader" class="loader" hidden aria-label="Загрузка"><div class="spinner" aria-hidden="true"></div></div>
-
-  <div id="cookie" class="cookie" hidden>
-    <div class="cookie-inner">
-      <p id="cookie-msg">Мы используем cookies/localStorage для избранного и входа.</p>
-      <button class="btn" type="button" data-cookie-ok>Ок</button>
+  <!-- Cookie access banner / check -->
+  <div id="cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1">Для корректной работы входа и регистрации требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — откройте настройки браузера и разрешите cookies (включая third‑party cookies) и используйте HTTPS.</div>
+      <div style="display:flex;gap:8px"><button id="cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
     </div>
   </div>
-
-  <div id="auth-backdrop" class="auth" hidden aria-label="Вход">
-    <div class="auth-card" role="dialog" aria-modal="true">
-      <div class="auth-head">
-        <div style="font-weight:900">Вход</div>
-        <button class="btn ghost" type="button" data-auth-close aria-label="Закрыть">✕</button>
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="site-footer-inner">
+      <div class="footer-left">
+        <div class="footer-brand">iSmartShop</div>
+        <div class="footer-copy">© <span id="year">2026</span> iSmartShop — Все права защищены.</div>
       </div>
-      <div class="auth-body">
-        <form id="auth-form">
-          <div class="auth-row">
-            <input id="auth-email" class="input" autocomplete="email" placeholder="Email" />
-            <input id="auth-password" class="input" type="password" autocomplete="current-password" placeholder="Пароль" />
-          </div>
-          <div class="auth-status" id="auth-status"></div>
-          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-            <button id="auth-submit" class="btn primary" type="submit">Войти</button>
-            <button id="auth-logout" class="btn" type="button" hidden>Выйти</button>
-          </div>
-          <div style="margin-top:10px;color:var(--muted);font-size:12px;line-height:1.5;">
-            Регистрация отключена. Если нет аккаунта — напишите нам в Telegram.
-          </div>
+      <div class="footer-right">
+        <a href="/contacts" class="footer-link">Контакты</a>
+        <a href="/terms" class="footer-link">Условия</a>
+        <a href="/privacy" class="footer-link">Политика конфиденциальности</a>
+      </div>
+      <div style="height: 180px; width: 100%; clear: both;"></div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      const banner = document.getElementById('cookie-banner');
+      const btn = document.getElementById('cookie-test-btn');
+      const dismiss = document.getElementById('cookie-dismiss');
+      function testCookies(){
+        try{
+          // try to set a test cookie readable by JS
+          document.cookie = 'ismart_test=1; path=/';
+          const ok = document.cookie.indexOf('ismart_test=1') !== -1;
+          if(ok){ document.cookie = 'ismart_test=; Max-Age=0; path=/'; window.ISMART_COOKIES_OK = true; banner.style.display='none'; }
+          else { window.ISMART_COOKIES_OK = false; banner.style.display=''; }
+          return ok;
+        }catch(e){ window.ISMART_COOKIES_OK = false; banner.style.display=''; return false; }
+      }
+      btn?.addEventListener('click', ()=>{ const ok = testCookies(); if(ok) alert('Cookies доступны.'); else alert('Cookies недоступны. Проверьте настройки браузера и HTTPS.'); });
+      dismiss?.addEventListener('click', ()=> banner.style.display='none');
+      setTimeout(testCookies, 50);
+    })();
+  </script>
+
+  <!-- Auth modal (login / registration) -->
+  <div class="auth-modal" id="auth-modal" aria-hidden="true" style="display:none">
+    <div class="auth-card">
+      <div class="auth-top">
+        <div class="auth-note">Зарегистрируйтесь или войдите в свой аккаунт чтобы пользоваться сайтом</div>
+      </div>
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab">Войти</button>
+        <button id="tab-register" class="auth-tab">Регистрация</button>
+      </div>
+      <div class="auth-forms">
+        <form id="form-login" class="auth-form" style="display:none" onsubmit="return false">
+          <h2>Войти</h2>
+          <input id="login-email" placeholder="Адрес электронной почты" type="email" />
+          <input id="login-password" placeholder="Пароль" type="password" />
+          <button id="login-submit" class="primary-cta" type="button">Войти</button>
+        </form>
+        <form id="form-register" class="auth-form" style="display:none" onsubmit="return false">
+          <h2>Регистрация</h2>
+          <input id="reg-name" placeholder="Имя" type="text" />
+          <input id="reg-email" placeholder="Адрес электронной почты" type="email" />
+          <input id="reg-password" placeholder="Пароль" type="password" />
+          <input id="reg-password-repeat" placeholder="Повторите пароль" type="password" />
+          <button id="reg-submit" class="primary-cta" type="button">Зарегистрироваться</button>
         </form>
       </div>
     </div>
   </div>
-
-  <script type="module" src="src/js/main.js"></script>
+  <!-- Verification modal -->
+  <div class="verify-modal" id="verify-modal" aria-hidden="true" style="display:none">
+    <div class="auth-card">
+      <div class="auth-top">
+        <div class="auth-note">Введите код подтверждения из письма</div>
+      </div>
+      <form id="form-verify" class="auth-form" onsubmit="return false">
+        <input id="verify-email" type="email" placeholder="Email" style="margin-bottom:8px" />
+        <input id="verify-code" type="text" placeholder="Код из письма" />
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="verify-submit" class="primary-cta" type="button">Подтвердить</button>
+          <button id="verify-resend" class="secondary-cta" type="button">Отправить код ещё раз</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
 
