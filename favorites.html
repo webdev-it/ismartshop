@@ -3,27 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="iSmartShop — онлайн-магазин цифровой техники в Южно‑Сахалинске. iPhone, Samsung, MacBook и аксессуары.">
-  <meta name="google-adsense-account" content="ca-pub-8729431037440255">
-  <!-- Favicon -->
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-  <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
-
-  <title>iSmartShop — Магазин цифровой техники</title>
+  <title>Избранное — iSmartShop</title>
   <link rel="stylesheet" href="src/css/app.css" />
   <script>
-    // Backend API base (deployed on Render)
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
   </script>
-
-  <!-- JivoSite chat widget -->
-  <script src="//code.jivo.ru/widget/Z8QiHSnb6N" async></script>
-  
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8729431037440255"
-     crossorigin="anonymous"></script>
 </head>
-<body data-page="home">
+<body data-page="favorites">
   <a class="skip" href="#content">Перейти к контенту</a>
 
   <div class="site">
@@ -33,13 +19,13 @@
           <span class="brand-mark" aria-hidden="true"><img src="assets/images/logo.png" alt="" /></span>
           <span>
             <div class="brand-title">iSmartShop</div>
-            <div class="brand-sub">Цифровая техника • Южно‑Сахалинск</div>
+            <div class="brand-sub">Избранное</div>
           </span>
         </a>
 
         <nav class="nav" aria-label="Навигация">
-          <a href="index.html" data-nav="home" aria-current="page">Каталог</a>
-          <a href="favorites.html" data-nav="favorites">Избранное</a>
+          <a href="index.html" data-nav="home">Каталог</a>
+          <a href="favorites.html" data-nav="favorites" aria-current="page">Избранное</a>
           <a href="profile.html" data-nav="profile">Профиль</a>
           <a href="contacts.html" data-nav="contacts">Контакты</a>
           <a href="admin.html" data-nav="admin">Админ</a>
@@ -57,58 +43,20 @@
 
     <main id="content" class="main" role="main">
       <div class="container">
-        <section class="hero" aria-label="Каталог">
-          <div class="hero-inner">
+        <section class="hero" aria-label="Избранное">
+          <div class="hero-inner" style="grid-template-columns: 1fr;">
             <div>
-              <h1>Техника, которая выглядит дорого — и работает быстро.</h1>
-              <p>Обновлённый дизайн и новая архитектура фронтенда: модульный JS, единый UI‑kit, быстрый каталог. Бэкенд не трогали.</p>
-
-              <div class="searchbar" role="search">
-                <input id="search" class="input" placeholder="Поиск по названию или описанию…" autocomplete="off" />
-                <button class="btn" type="button" data-quick-all>
-                  Сброс
-                </button>
-              </div>
-
-              <div class="pills" id="categories" aria-label="Категории">
-                <!-- injected -->
+              <h1>Избранное</h1>
+              <p>Избранные товары сохраняются локально и синхронизируются с аккаунтом после входа.</p>
+              <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <button class="btn" type="button" data-fav-sync>Синхронизировать</button>
+                <span id="fav-meta" style="color:var(--muted);font-size:13px"></span>
               </div>
             </div>
-
-            <aside class="hero-card" aria-label="Сервис">
-              <div style="font-weight:900;font-size:14px;letter-spacing:-0.01em;">Почему iSmartShop</div>
-              <div style="margin-top:10px;color:var(--muted);font-size:13px;line-height:1.6;">
-                • Быстрый подбор <span class="kbd">поиск</span><br>
-                • Избранное на устройстве<br>
-                • Покупка через Telegram
-              </div>
-
-              <div id="hero-carousel" class="carousel" aria-label="Витрина">
-                <div class="frame">
-                  <img id="hero-carousel-img" src="" alt="" loading="lazy" />
-                  <div class="nav" aria-hidden="false">
-                    <button class="btn ghost" type="button" data-carousel-prev aria-label="Назад">‹</button>
-                    <button class="btn ghost" type="button" data-carousel-next aria-label="Вперёд">›</button>
-                  </div>
-                </div>
-                <div id="hero-carousel-dots" class="dots" aria-label="Слайды"></div>
-              </div>
-
-              <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-                <a class="btn primary" href="contacts.html">Контакты</a>
-                <a class="btn" href="admin.html">Админ</a>
-              </div>
-            </aside>
           </div>
         </section>
 
         <section class="section" aria-label="Товары">
-          <div class="section-head">
-            <div>
-              <h2 class="section-title">Каталог</h2>
-              <p class="section-sub">Данные подгружаются из API: <span class="kbd">/api/products</span></p>
-            </div>
-          </div>
           <div class="grid" id="products" aria-live="polite"></div>
         </section>
       </div>
@@ -153,7 +101,6 @@
   </div>
 
   <div id="toast" class="toast" data-open="false" role="status" aria-live="polite"></div>
-
   <div id="loader" class="loader" hidden aria-label="Загрузка"><div class="spinner" aria-hidden="true"></div></div>
 
   <div id="cookie" class="cookie" hidden>
@@ -191,5 +138,3 @@
   <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
-
-

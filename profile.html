@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Профиль — iSmartShop</title>
+  <link rel="stylesheet" href="src/css/app.css" />
+  <script>
+    window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
+  </script>
+</head>
+<body data-page="profile">
+  <a class="skip" href="#content">Перейти к контенту</a>
+
+  <div class="site">
+    <header class="header" role="banner">
+      <div class="container header-inner">
+        <a class="brand" href="index.html" aria-label="iSmartShop">
+          <span class="brand-mark" aria-hidden="true"><img src="assets/images/logo.png" alt="" /></span>
+          <span>
+            <div class="brand-title">iSmartShop</div>
+            <div class="brand-sub">Профиль</div>
+          </span>
+        </a>
+
+        <nav class="nav" aria-label="Навигация">
+          <a href="index.html" data-nav="home">Каталог</a>
+          <a href="favorites.html" data-nav="favorites">Избранное</a>
+          <a href="profile.html" data-nav="profile" aria-current="page">Профиль</a>
+          <a href="contacts.html" data-nav="contacts">Контакты</a>
+          <a href="admin.html" data-nav="admin">Админ</a>
+        </nav>
+
+        <div class="actions">
+          <button class="btn" type="button" data-login onclick="window.ISMART_OPEN_LOGIN && window.ISMART_OPEN_LOGIN()">Войти</button>
+          <button class="btn ghost" type="button" data-theme-toggle aria-label="Тема">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 19v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.22 4.22l1.42 1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.36 18.36l1.42 1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M1 12h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 12h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.22 19.78l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
+            Тема
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="content" class="main" role="main">
+      <div class="container">
+        <section class="hero" aria-label="Профиль">
+          <div class="hero-inner" style="grid-template-columns: 1fr;">
+            <div>
+              <h1>Профиль</h1>
+              <p>Вход работает как раньше. Регистрация отключена.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Данные профиля">
+          <article class="card" style="min-height:auto">
+            <div class="card-body">
+              <div class="price" id="profile-name">—</div>
+              <p class="desc" id="profile-email" style="line-clamp: unset; -webkit-line-clamp: unset"></p>
+              <p class="desc" id="profile-status" style="line-clamp: unset; -webkit-line-clamp: unset"></p>
+              <div class="card-actions" style="margin-top:10px">
+                <button class="btn primary" type="button" data-profile-login>Войти</button>
+                <button class="btn" type="button" data-profile-logout hidden>Выйти</button>
+              </div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer" role="contentinfo">
+      <div class="container footer-grid">
+        <div>
+          <div style="font-weight:900;color:var(--text)">iSmartShop</div>
+          <div style="margin-top:6px">© <span id="year">2026</span>. Все права защищены.</div>
+        </div>
+        <div class="footer-links">
+          <a href="contacts.html">Контакты</a>
+          <a href="terms.html">Условия</a>
+          <a href="privacy.html">Политика</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" data-open="false" role="status" aria-live="polite"></div>
+  <div id="loader" class="loader" hidden aria-label="Загрузка"><div class="spinner" aria-hidden="true"></div></div>
+
+  <div id="cookie" class="cookie" hidden>
+    <div class="cookie-inner">
+      <p id="cookie-msg">Мы используем cookies/localStorage для избранного и входа.</p>
+      <button class="btn" type="button" data-cookie-ok>Ок</button>
+    </div>
+  </div>
+
+  <div id="auth-backdrop" class="auth" hidden aria-label="Вход">
+    <div class="auth-card" role="dialog" aria-modal="true">
+      <div class="auth-head">
+        <div style="font-weight:900">Вход</div>
+        <button class="btn ghost" type="button" data-auth-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="auth-body">
+        <form id="auth-form">
+          <div class="auth-row">
+            <input id="auth-email" class="input" autocomplete="email" placeholder="Email" />
+            <input id="auth-password" class="input" type="password" autocomplete="current-password" placeholder="Пароль" />
+          </div>
+          <div class="auth-status" id="auth-status"></div>
+          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+            <button id="auth-submit" class="btn primary" type="submit">Войти</button>
+            <button id="auth-logout" class="btn" type="button" hidden>Выйти</button>
+          </div>
+          <div style="margin-top:10px;color:var(--muted);font-size:12px;line-height:1.5;">
+            Регистрация отключена. Если нет аккаунта — напишите нам в Telegram.
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/js/main.js"></script>
+</body>
+</html>
