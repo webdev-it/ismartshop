@@ -198,10 +198,13 @@
   <script src="script.js"></script>
 
   <!-- Cookie access banner / check -->
-  <div id="cookie-banner" style="position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:12px;background:rgba(255,255,255,0.98);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div style="flex:1">Для корректной работы входа и регистрации требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — откройте настройки браузера и разрешите cookies (включая third‑party cookies) и используйте HTTPS.</div>
-      <div style="display:flex;gap:8px"><button id="cookie-test-btn" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer">Проверить</button><button id="cookie-dismiss" style="padding:8px 12px;border-radius:8px;border:0;cursor:pointer;background:#eee">Закрыть</button></div>
+  <div id="cookie-banner" class="cookie-banner">
+    <div class="cookie-banner__row">
+      <div class="cookie-banner__text">Для корректной работы входа и регистрации требуется поддержка Cookies. Нажмите «Проверить», чтобы выполнить тест. Если тест не проходит — откройте настройки браузера и разрешите cookies (включая third‑party cookies) и используйте HTTPS.</div>
+      <div class="cookie-banner__actions">
+        <button id="cookie-test-btn" class="cookie-banner__btn">Проверить</button>
+        <button id="cookie-dismiss" class="cookie-banner__btn secondary">Закрыть</button>
+      </div>
     </div>
   </div>
   <!-- Footer -->
@@ -216,7 +219,6 @@
         <a href="/terms" class="footer-link">Условия</a>
         <a href="/privacy" class="footer-link">Политика конфиденциальности</a>
       </div>
-      <div style="height: 180px; width: 100%; clear: both;"></div>
     </div>
   </footer>
 
