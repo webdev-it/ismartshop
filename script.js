@@ -105,13 +105,17 @@ async function fetchProducts(){
       return productsCache;
     }
     
+    // Fetch all products at once (no pagination on initial load)
     const res = await apiFetch('/api/products');
     if(!res.ok) throw new Error('no api');
     const data = await res.json();
     
+    // Handle both paginated and non-paginated responses
+    const products = Array.isArray(data) ? data : (data.products || []);
+    
     // Update cache time
     productsCacheTime = now;
-    return data;
+    return products;
   }catch(e){
     return [];
   }
@@ -199,7 +203,7 @@ let productsCacheTime = 0;
 let categoriesCacheTime = 0;
 
 // Lazy loading (infinite scroll) parameters
-const PRODUCTS_PER_PAGE = 12;
+const PRODUCTS_PER_PAGE = 8; // Load 8 cards at a time for bandwidth optimization
 let currentPage = 0;
 let allFilteredProducts = [];
 let isLoadingMore = false;
@@ -1117,7 +1121,7 @@ function loadMoreProducts(){
         <button class="buy">Купить</button>
       </div>
     `;
-    // create image element safely with error handling
+    // create image element with lazy loading
     const imgWrap = card.querySelector('.image');
     imgWrap.classList.add('skeleton'); // Add skeleton loading state
     const imgEl = document.createElement('img');
@@ -1131,12 +1135,43 @@ function loadMoreProducts(){
       imgWrap.classList.remove('skeleton');
       imgEl.classList.add('loaded');
     } else {
-      imgEl.src = src;
-      // Remove skeleton and add loaded class when image actually loads
-      imgEl.onload = () => {
-        imgWrap.classList.remove('skeleton');
-        imgEl.classList.add('loaded');
-      };
+      // Use data-src for lazy loading instead of immediate loading
+      imgEl.dataset.src = src;
+      imgEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; // transparent placeholder
+      
+      // Set up intersection observer for lazy loading this image
+      if('IntersectionObserver' in window){
+        const imgObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach(entry => {
+            if(entry.isIntersecting){
+              const img = entry.target;
+              if(img.dataset.src){
+                img.src = img.dataset.src;
+                img.onload = () => {
+                  imgWrap.classList.remove('skeleton');
+                  img.classList.add('loaded');
+                };
+                img.onerror = () => {
+                  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                  img.style.opacity = '0.4';
+                  imgWrap.classList.remove('skeleton');
+                  img.classList.add('loaded');
+                };
+                img.removeAttribute('data-src');
+                observer.unobserve(img);
+              }
+            }
+          });
+        }, { rootMargin: '100px' }); // Start loading 100px before entering viewport
+        imgObserver.observe(imgEl);
+      } else {
+        // Fallback for browsers without IntersectionObserver
+        imgEl.src = src;
+        imgEl.onload = () => {
+          imgWrap.classList.remove('skeleton');
+          imgEl.classList.add('loaded');
+        };
+      }
     }
     // Add error handler for failed image loads
     imgEl.onerror = ()=>{ 
@@ -1160,6 +1195,7 @@ function loadMoreProducts(){
     // staggered entrance with adjusted delay
     setTimeout(()=> wrap.classList.add('entered'), 30 * pageIdx);
 
+    /* TEMPORARILY DISABLED: Ad insertion logic
     // Insert ads after every 18 products globally
     if((globalIdx + 1) % 18 === 0 && globalIdx + 1 < allFilteredProducts.length){
       const adsSection = document.createElement('section');
@@ -1179,6 +1215,7 @@ function loadMoreProducts(){
         try{ (adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
       }
     }
+    */
   });
   
   // Add sentinel element at the end for intersection observer
