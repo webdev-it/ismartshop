@@ -1,6 +1,6 @@
 // script.js — inject products and handle carousel
-// Loader: keep initial animated logo visible briefly, but don't block UI on slow networks
-const INITIAL_LOADER_MS = 450;
+// Loader: keep initial animated logo visible for at least 3 seconds
+const INITIAL_LOADER_MS = 3000;
 function hideLoaderNow(){
   try{
     document.body.classList.remove('loading');
@@ -12,7 +12,7 @@ function hideLoaderNow(){
     }
   }catch(e){/* ignore */}
 }
-// start timer immediately so the loader doesn't linger
+// start timer immediately so the loader always lasts ~3s
 setTimeout(hideLoaderNow, INITIAL_LOADER_MS);
 
 // Image lazy loading for main page (reduce initial bandwidth)
@@ -199,36 +199,12 @@ let productsCacheTime = 0;
 let categoriesCacheTime = 0;
 
 // Lazy loading (infinite scroll) parameters
-// Keep it small to reduce DOM + image pressure (server stays the same, we just render fewer at a time).
-const PRODUCTS_PER_PAGE = 6;
+const PRODUCTS_PER_PAGE = 12;
 let currentPage = 0;
 let allFilteredProducts = [];
 let isLoadingMore = false;
 let hasMoreProducts = true;
 let loadMoreObserver = null;
-
-function renderProductSkeletons(count = PRODUCTS_PER_PAGE){
-  const el = document.getElementById('products');
-  if(!el) return;
-  el.innerHTML = '';
-  const fragment = document.createDocumentFragment();
-  for(let i=0;i<count;i++){
-    const wrap = document.createElement('div');
-    wrap.className = 'card-wrap entered';
-    wrap.innerHTML = `
-      <article class="card">
-        <div class="image skeleton"></div>
-        <div class="footer">
-          <div class="price" style="opacity:.35">&nbsp;</div>
-          <div class="title" style="opacity:.35">&nbsp;</div>
-          <button class="buy" disabled>Купить</button>
-        </div>
-      </article>
-    `;
-    fragment.appendChild(wrap);
-  }
-  el.appendChild(fragment);
-}
 // Normalize products: ensure `images` array and numeric `priceNum`
 function normalizeProducts(list){
   return (list || []).map(p=>{
@@ -1146,10 +1122,6 @@ function loadMoreProducts(){
     imgWrap.classList.add('skeleton'); // Add skeleton loading state
     const imgEl = document.createElement('img');
     imgEl.alt = p.title || '';
-    // hint the browser to deprioritize offscreen images
-    try{ imgEl.loading = 'lazy'; }catch(e){}
-    try{ imgEl.decoding = 'async'; }catch(e){}
-    try{ imgEl.fetchPriority = (currentPage === 0 && pageIdx < 2) ? 'high' : 'low'; }catch(e){}
     // sanitize image src on client-side as an extra layer
     const src = (((Array.isArray(p.images) && p.images[0]) || p.image) || '').trim();
     if(!src || src === 'po' || src === '/po' || src.endsWith('/po')){
@@ -1430,17 +1402,9 @@ onReady(async function(){
   
   // Setup image lazy loading
   setupImageLazyLoading();
-
-  // Render a fast shell immediately (even on slow internet)
-  renderProductSkeletons(PRODUCTS_PER_PAGE);
-  const searchInput = document.getElementById('search');
-  if(searchInput){
-    searchInput.disabled = true;
-    searchInput.placeholder = 'Загрузка товаров…';
-  }
   
-  // fetch app config (Telegram contact, etc) — don't block first render
-  const configPromise = fetchConfig();
+  // fetch app config (Telegram contact, etc)
+  await fetchConfig();
   
   // sanitize images to avoid requests to unexpected paths like '/po'
   (function sanitizeImages(){
@@ -1466,25 +1430,20 @@ onReady(async function(){
   initVerification();
   console.log('Auth handlers initialized');
   
-  // Start network work ASAP (don't await auth/session first)
-  const productsPromise = fetchProducts();
-  const categoriesPromise = fetchCategories();
+  // check if user is already logged in
+  const currentUser = await checkCurrentUser();
+  if(!currentUser) {
+    // User not logged in — mandatory registration is suppressed.
+    // To re-enable forced registration, call `showAuthModal('register')` here.
+    console.log('User not logged in: registration modal suppressed');
+  } else {
+    console.log('User already logged in:', currentUser.email);
+    // sync server-side favorites into local cache so UI reflects account data
+    try{ await migrateLocalFavsToServer(); }catch(e){}
+    try{ await syncFavsFromServer(); }catch(e){}
+  }
 
-  // check if user is already logged in (in background)
-  const currentUserPromise = (async ()=>{
-    try{
-      const currentUser = await checkCurrentUser();
-      if(currentUser){
-        try{ await migrateLocalFavsToServer(); }catch(e){}
-        try{ await syncFavsFromServer(); }catch(e){}
-      }
-      return currentUser;
-    }catch(e){
-      return null;
-    }
-  })();
-
-  const [products, categories] = await Promise.all([productsPromise, categoriesPromise]);
+  const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
   // normalize products and shuffle for randomized homepage
   let normalized = normalizeProducts(products || []);
   (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(normalized);
@@ -1496,12 +1455,8 @@ onReady(async function(){
   setupTabs(productsCache);
   attachBuyHandlers();
 
-  if(searchInput){
-    searchInput.disabled = false;
-    searchInput.placeholder = 'Поиск…';
-  }
-
   // Setup search functionality
+  const searchInput = document.getElementById('search');
   if(searchInput){
     searchInput.addEventListener('input', (e) => {
       clearTimeout(searchDebounceTimeout);
@@ -1511,9 +1466,5 @@ onReady(async function(){
       }, 300); // 300ms debounce
     });
   }
-
-  // best-effort: wait for background tasks (no UI impact)
-  try{ await Promise.race([configPromise, Promise.resolve(null)]); }catch(e){}
-  try{ await Promise.race([currentUserPromise, Promise.resolve(null)]); }catch(e){}
 });
 
