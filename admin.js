@@ -724,7 +724,8 @@
   async function openCategoryForm(id){
     const wrap = $('#category-form-wrap'); wrap.innerHTML='';
     const cats = await loadCategories();
-    const cat = id ? cats.find(c=>c.id===id) : { id: Date.now().toString(), name:'' };
+    const isEditing = !!id; // true if editing existing category
+    const cat = isEditing ? cats.find(c=>c.id===id) : { id: null, name:'' };
     const form = document.createElement('form');
     form.innerHTML = `<label>Название<br><input name="name" value="${escapeHtml(cat.name)}"></label><div style="margin-top:8px"><button type="submit">Сохранить</button> <button type="button" id="cancel-cat">Отмена</button></div>`;
     wrap.appendChild(form);
@@ -732,12 +733,14 @@
     form.addEventListener('submit', async (e)=>{
       e.preventDefault(); const fd = new FormData(form); const name = fd.get('name');
       // try API create/update
-      if(cat && cat.id){
+      if(isEditing && cat && cat.id){
         const res = await tryApi('PUT', `/api/categories/${cat.id}`, { name });
         if(res){ await loadCategories(); renderCategories(); wrap.innerHTML=''; return; }
+      } else {
+        const apiRes = await tryApi('POST', '/api/categories', { name });
+        if(apiRes){ await loadCategories(); renderCategories(); wrap.innerHTML=''; return; }
       }
-      const apiRes = await tryApi('POST', '/api/categories', { name });
-      if(apiRes){ await loadCategories(); renderCategories(); wrap.innerHTML=''; return; }
+      // fallback to local storage
       const cats2 = await loadCategories(); const idx = cats2.findIndex(x=>x.id===cat.id); if(idx>=0) cats2[idx].name = name; else cats2.push({ id: Date.now().toString(), name }); saveCategoriesLocally(cats2); renderCategories(); wrap.innerHTML='';
     });
   }
