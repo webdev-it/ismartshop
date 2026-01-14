@@ -9,6 +9,42 @@
     // Backend API base (deployed on Render)
     window.ISMART_API_BASE = 'https://ismartshopdatabase.onrender.com';
   </script>
+  <style>
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0;
+    }
+    
+    .pagination button {
+        padding: 8px 16px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    
+    .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .pagination button:hover:not(:disabled) {
+        background: #f0f0f0;
+    }
+    
+    .pagination .page-info {
+        padding: 8px 16px;
+    }
+    
+    .loading-spinner {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
 </head>
 <body>
   
@@ -96,8 +132,6 @@
         </div>
       </section>
 
-      
-
       <section id="view-database" class="admin-view hidden">
         <h2>База данных / Хранилище</h2>
         <div class="admin-panel-row">
@@ -141,6 +175,167 @@
   </div>
 
   <script src="admin.js"></script>
-  
+  <script>
+    const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000'
+            : 'https://ismartshopdatabase.onrender.com';
+
+        let currentUser = null;
+        let currentPage = 1;
+        const itemsPerPage = 20;
+        let totalProducts = 0;
+
+        async function loadProducts() {
+            try {
+                showLoading('Загрузка товаров...');
+                const response = await fetch(`${API_URL}/api/admin/products?page=${currentPage}&limit=${itemsPerPage}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Ошибка загрузки товаров');
+                
+                const data = await response.json();
+                totalProducts = data.total || 0;
+                
+                const categories = await fetchCategories();
+                displayProducts(data.products || [], categories);
+                updatePagination(data.page, data.total, data.limit);
+                hideLoading();
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Не удалось загрузить товары');
+                hideLoading();
+            }
+        }
+
+        function displayProducts(products, categories) {
+            const tbody = document.getElementById('products-tbody');
+            tbody.innerHTML = '';
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Нет товаров</td></tr>';
+                return;
+            }
+            
+            products.forEach(product => {
+                const category = categories.find(c => c.id === product.category);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(product.id)}</td>
+                    <td>${escapeHtml(product.title)}</td>
+                    <td>${product.price} ₽</td>
+                    <td>${category ? escapeHtml(category.name) : 'Без категории'}</td>
+                    <td>
+                        <span class="status-badge ${product.status}">${getStatusText(product.status)}</span>
+                    </td>
+                    <td>
+                        <button onclick="editProduct('${product.id}')" class="btn-small">Редактировать</button>
+                        <button onclick="deleteProduct('${product.id}')" class="btn-small btn-danger">Удалить</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updatePagination(page, total, limit) {
+            const totalPages = Math.ceil(total / limit);
+            const paginationDiv = document.getElementById('pagination');
+            
+            if (!paginationDiv) {
+                const productsSection = document.querySelector('.products-section');
+                const newPagination = document.createElement('div');
+                newPagination.id = 'pagination';
+                newPagination.className = 'pagination';
+                productsSection.appendChild(newPagination);
+            }
+            
+            document.getElementById('pagination').innerHTML = `
+                <button onclick="changePage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>← Предыдущая</button>
+                <span class="page-info">Страница ${page} из ${totalPages} (всего товаров: ${total})</span>
+                <button onclick="changePage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Следующая →</button>
+            `;
+        }
+
+        function changePage(newPage) {
+            currentPage = newPage;
+            loadProducts();
+        }
+
+        async function editProduct(productId) {
+            try {
+                showLoading('Загрузка товара...');
+                // Load full product with images only when editing
+                const response = await fetch(`${API_URL}/api/products/${productId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Товар не найден');
+                
+                const product = await response.json();
+                hideLoading();
+                
+                document.getElementById('product-id').value = product.id;
+                document.getElementById('product-title').value = product.title;
+                document.getElementById('product-price').value = product.price;
+                document.getElementById('product-category').value = product.category || '';
+                document.getElementById('product-description').value = product.description || '';
+                
+                // Show images only in edit mode
+                const imagesPreview = document.getElementById('images-preview');
+                if (imagesPreview) {
+                    imagesPreview.innerHTML = '';
+                    const images = product.images || (product.image ? [product.image] : []);
+                    images.forEach(img => {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = img.startsWith('http') ? img : `${API_URL}${img}`;
+                        imgEl.style.maxWidth = '100px';
+                        imgEl.style.margin = '5px';
+                        imagesPreview.appendChild(imgEl);
+                    });
+                }
+                
+                document.getElementById('product-form-title').textContent = 'Редактировать товар';
+                document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Не удалось загрузить товар');
+                hideLoading();
+            }
+        }
+
+        function showLoading(message = 'Загрузка...') {
+            let spinner = document.getElementById('loading-spinner');
+            if (!spinner) {
+                spinner = document.createElement('div');
+                spinner.id = 'loading-spinner';
+                spinner.className = 'loading-spinner';
+                document.body.appendChild(spinner);
+            }
+            spinner.textContent = message;
+            spinner.style.display = 'block';
+        }
+
+        function hideLoading() {
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) spinner.style.display = 'none';
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'approved': 'Одобрен',
+                'pending': 'На модерации',
+                'rejected': 'Отклонен'
+            };
+            return statusMap[status] || status;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+  </script>
 </body>
 </html>
