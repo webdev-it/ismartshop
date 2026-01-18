@@ -105,7 +105,10 @@
   }
 
   async function loadCategories(){
-    const api = await tryApi('GET','/api/categories');
+    let api = await tryApi('GET','/api/categories');
+    if(!api){
+      api = await tryApi('GET','/api/categories?fallback=1');
+    }
     if(api){ localStorage.setItem(CATS_KEY, JSON.stringify(api)); return api; }
     const s = localStorage.getItem(CATS_KEY); 
     if(s) {
