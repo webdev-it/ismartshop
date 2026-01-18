@@ -591,6 +591,10 @@ svg.icon path, svg.icon line, svg.icon circle{stroke: currentColor !important;}
 .ads-section{position:relative;}
 .ads-section--standalone{margin-top:16px;margin-bottom:24px;}
 
+@media (max-width: 520px){
+  .ads-section{min-height: 120px; padding: 10px;}
+}
+
 /* Footer */
 .site-footer{margin-top: 18px;padding: 20px 0 8px;border-top: 1px solid var(--line);}
 

@@ -1518,5 +1518,24 @@ onReady(async function(){
       }, 300); // 300ms debounce
     });
   }
+
+  // Collapse ad container if no ad is filled
+  try{
+    const adSlot = document.getElementById('ads-slot');
+    if(adSlot){
+      const checkAd = ()=>{
+        const ins = adSlot.querySelector('ins.adsbygoogle');
+        const status = ins ? ins.getAttribute('data-ad-status') : null;
+        if(status === 'unfilled'){
+          adSlot.style.display = 'none';
+        } else {
+          adSlot.style.display = '';
+        }
+      };
+      setTimeout(checkAd, 1500);
+      const obs = new MutationObserver(checkAd);
+      obs.observe(adSlot, { attributes: true, childList: true, subtree: true });
+    }
+  }catch(e){}
 });
 
