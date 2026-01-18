@@ -146,6 +146,20 @@ async function fetchCategories(){
   }
 }
 
+function buildCategoriesFromProducts(products){
+  try{
+    const map = new Map();
+    (products || []).forEach(p=>{
+      const id = String(p.category || '').trim();
+      if(!id) return;
+      if(!map.has(id)) map.set(id, { id, name: id });
+    });
+    return Array.from(map.values());
+  }catch(e){
+    return [];
+  }
+}
+
 // Fetch app config (Telegram contact, etc)
 async function fetchConfig(){
   try{
@@ -1289,6 +1303,21 @@ function renderCategories(categories){
   el.innerHTML = '';
   
   const fragment = document.createDocumentFragment();
+  // Always render "Все" pill
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (selectedCategory === 'all' ? ' active' : '');
+  allBtn.textContent = 'Все';
+  allBtn.dataset.id = 'all';
+  allBtn.addEventListener('click', async ()=>{
+    selectedCategory = 'all';
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    allBtn.classList.add('active');
+    productsCache = normalizeProducts(productsCache);
+    (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(productsCache);
+    renderProducts(productsCache, currentSearchQuery);
+  });
+  fragment.appendChild(allBtn);
+
   categories.forEach(c =>{
     const b = document.createElement('button');
     b.className = 'pill' + (c.id===selectedCategory? ' active':'');
@@ -1494,13 +1523,15 @@ onReady(async function(){
     try{ await syncFavsFromServer(); }catch(e){}
   }
 
-  const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
+  const [products, categoriesFromApi] = await Promise.all([fetchProducts(), fetchCategories()]);
   // normalize products and shuffle for randomized homepage
   let normalized = normalizeProducts(products || []);
   (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(normalized);
   productsCache = normalized;
   productsCacheTime = Date.now();
+  const categories = (categoriesFromApi && categoriesFromApi.length) ? categoriesFromApi : buildCategoriesFromProducts(productsCache);
   categoriesCache = categories;
+  categoriesCacheTime = Date.now();
   renderCategories(categories);
   renderProducts(productsCache);
   setupCarousel();
