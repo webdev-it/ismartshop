@@ -133,7 +133,11 @@ async function fetchCategories(){
       return categoriesCache;
     }
     
-    const res = await apiFetch('/api/categories');
+    let res = await apiFetch('/api/categories');
+    if(!res.ok){
+      // If DB is unavailable, retry with fallback
+      res = await apiFetch('/api/categories?fallback=1');
+    }
     if(!res.ok) throw new Error('no api');
     const data = await res.json();
     
