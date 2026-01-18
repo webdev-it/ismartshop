@@ -586,6 +586,9 @@ svg.icon path, svg.icon line, svg.icon circle{stroke: currentColor !important;}
 /* Ads */
 .ads-section{margin: 10px 0;padding: 14px;border-radius: 16px;border: 1px solid var(--line);background: var(--card);box-shadow: var(--card-shadow);min-height: 250px;display:flex;align-items:center;justify-content:center;}
 .ads-section ins.adsbygoogle{display:block !important;width:100%;max-width:100%}
+.ads-label{position:absolute;top:8px;left:12px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;}
+.ads-section{position:relative;}
+.ads-section--standalone{margin-top:16px;margin-bottom:24px;}
 
 /* Footer */
 .site-footer{margin-top: 18px;padding: 20px 0 8px;border-top: 1px solid var(--line);}

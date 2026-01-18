@@ -8,6 +8,11 @@
   let productsCache = null;
   let productsCacheTime = 0;
   const CACHE_TTL = 5 * 60 * 1000;
+  const ADMIN_PAGE_LIMIT = 50;
+  let adminPage = 1;
+  let adminHasMore = true;
+  let adminLoading = false;
+  let adminLoadMoreObserver = null;
   
   // Image cache for resized previews (prevent re-resizing)
   const imagePreviewCache = new Map();
@@ -40,45 +45,38 @@
     }catch(e){ return null; }
   }
 
-  // load products from API or localStorage fallback (with caching)
-  async function loadProducts(){
+  // load products from API with pagination (no full list fetch)
+  async function loadProducts({ page = 1, append = false } = {}){
     const now = Date.now();
-    // Return cached if still valid
-    if(productsCache && (now - productsCacheTime) < CACHE_TTL){
+    if(!append && page === 1 && productsCache && (now - productsCacheTime) < CACHE_TTL){
       return productsCache;
     }
-    
-    const api = await tryApi('GET','/api/products');
-    if(api) {
-      try{
-        // sanitize products: ensure they're objects with valid data
-        const sanitized = (Array.isArray(api) ? api : []).filter(p => p && typeof p === 'object').map(p => ({
-          id: String(p.id || Date.now()),
-          title: String(p.title || 'Unnamed'),
-          price: String(p.price || '0'),
-          category: String(p.category || ''),
-          description: String(p.description || ''),
-          images: Array.isArray(p.images) ? p.images : [],
-          image: String(p.image || ''),
-          colors: Array.isArray(p.colors) ? p.colors : [],
-          status: String(p.status || 'approved')
-        }));
-        // Update cache
-        productsCache = sanitized;
-        productsCacheTime = now;
-        // Try to save to localStorage, but don't fail if quota exceeded
-        try{
-          localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
-        }catch(quotaErr){
-          console.warn('localStorage quota exceeded, working without cache', quotaErr.message);
-          // clear old cache to free space
-          try{ localStorage.removeItem(PRODUCTS_KEY); }catch(e){}
-        }
-        return sanitized;
-      }catch(e){
-        console.error('Error processing products from API:', e);
-      }
+    if(adminLoading) return productsCache || [];
+    adminLoading = true;
+
+    const api = await tryApi('GET', `/api/admin/products?page=${page}&limit=${ADMIN_PAGE_LIMIT}`);
+    if(api && Array.isArray(api.products)){
+      const sanitized = api.products.filter(p => p && typeof p === 'object').map(p => ({
+        id: String(p.id || Date.now()),
+        title: String(p.title || 'Unnamed'),
+        price: String(p.price || '0'),
+        category: String(p.category || ''),
+        description: String(p.description || ''),
+        images: Array.isArray(p.images) ? p.images : [],
+        image: String(p.image || ''),
+        colors: Array.isArray(p.colors) ? p.colors : [],
+        status: String(p.status || 'approved')
+      }));
+      productsCache = append && Array.isArray(productsCache) ? productsCache.concat(sanitized) : sanitized;
+      productsCacheTime = now;
+      adminPage = page;
+      adminHasMore = !!api.hasMore;
+      adminLoading = false;
+      return productsCache;
     }
+    adminLoading = false;
+
+    // fallback to localStorage only when API not available
     const s = localStorage.getItem(PRODUCTS_KEY);
     if(s) {
       try{
@@ -95,7 +93,6 @@
         return [];
       }
     }
-    // no data available
     return [];
   }
 
@@ -143,19 +140,21 @@
 
   // Rendering
   async function renderDashboard(){
-    // Получаем пользователей из API (как в разделе БД)
-    let users = [];
-    try {
-      const res = await apiFetch('/admin/db/users?limit=500');
-      if(res.ok) users = await res.json();
-    } catch(e) {}
-    if(!users || !users.length) {
-      // fallback на старый способ
-      try { users = await loadUsers(); } catch(e) { users = []; }
+    let usersCount = 0;
+    let productsCount = 0;
+    try{
+      const stats = await tryApi('GET','/api/admin/stats');
+      if(stats && typeof stats.users === 'number') usersCount = stats.users;
+      if(stats && typeof stats.products === 'number') productsCount = stats.products;
+    }catch(e){}
+    if(!usersCount){
+      try{
+        const res = await apiFetch('/admin/db/users?limit=500');
+        if(res.ok){ const users = await res.json(); usersCount = users.length; }
+      }catch(e){}
     }
-    const products = await loadProducts();
-    $('#stat-users').textContent = users.length;
-    $('#stat-products').textContent = products.length;
+    $('#stat-users').textContent = usersCount || '—';
+    $('#stat-products').textContent = productsCount || '—';
   }
 
   // --- Auth helpers ---
@@ -255,14 +254,15 @@
   }
 
   async function renderProducts(){
-    const products = await loadProducts();
-    renderProductsList(products || []);
+    const products = await loadProducts({ page: 1, append: false });
+    renderProductsList(products || [], { reset: true });
+    setupAdminLoadMore();
   }
 
   // Render a given products array into the admin list (no API fetch)
-  function renderProductsList(products){
+  function renderProductsList(products, { reset = true } = {}){
     const list = $('#products-list'); 
-    list.innerHTML = '';
+    if(reset) list.innerHTML = '';
     const frags = document.createDocumentFragment(); // batch DOM operations
     (products || []).forEach(p=>{
       try{
@@ -291,6 +291,51 @@
       }
       renderProducts(); renderDashboard();
     }));
+  }
+
+  async function loadMoreAdminProducts(){
+    if(!adminHasMore || adminLoading) return;
+    const nextPage = adminPage + 1;
+    const prevLen = Array.isArray(productsCache) ? productsCache.length : 0;
+    await loadProducts({ page: nextPage, append: true });
+    const newItems = Array.isArray(productsCache) ? productsCache.slice(prevLen) : [];
+    if(newItems.length){
+      renderProductsList(newItems, { reset: false });
+    }
+    setupAdminLoadMore();
+  }
+
+  function setupAdminLoadMore(){
+    const list = $('#products-list');
+    if(!list) return;
+    let sentinel = document.getElementById('admin-load-more');
+    if(!adminHasMore){
+      if(sentinel) sentinel.remove();
+      if(adminLoadMoreObserver) adminLoadMoreObserver.disconnect();
+      return;
+    }
+    if(!sentinel){
+      sentinel = document.createElement('div');
+      sentinel.id = 'admin-load-more';
+      sentinel.style.height = '80px';
+      sentinel.style.display = 'flex';
+      sentinel.style.alignItems = 'center';
+      sentinel.style.justifyContent = 'center';
+      sentinel.style.color = 'var(--muted)';
+      sentinel.textContent = 'Загружаю еще...';
+      list.appendChild(sentinel);
+    } else {
+      list.appendChild(sentinel);
+    }
+    if(adminLoadMoreObserver) adminLoadMoreObserver.disconnect();
+    adminLoadMoreObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          loadMoreAdminProducts();
+        }
+      });
+    }, { rootMargin: '200px', threshold: 0 });
+    adminLoadMoreObserver.observe(sentinel);
   }
 
   // Filter products by search query (for search field)

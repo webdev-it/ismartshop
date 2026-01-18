@@ -96,26 +96,29 @@ async function apiFetch(path, opts = {}){
   }
   return fetch(url, init);
 }
+async function fetchProductsPage(page = 1){
+  const res = await apiFetch(`/api/products?page=${page}&limit=${SERVER_PAGE_SIZE}`);
+  if(!res.ok) throw new Error('no api');
+  const data = await res.json();
+  const products = Array.isArray(data) ? data : (data.products || []);
+  const hasMore = Array.isArray(data) ? false : !!data.hasMore;
+  return { products, hasMore };
+}
+
 async function fetchProducts(){
   try{
     // Check if cache is still fresh
     const now = Date.now();
-    if(productsCache.length > 0 && (now - productsCacheTime) < PRODUCTS_CACHE_TTL){
+      if(productsCache.length > 0 && (now - productsCacheTime) < PRODUCTS_CACHE_TTL){
       console.log('[Cache] Using cached products');
       return productsCache;
     }
-    
-    // Fetch all products at once (no pagination on initial load)
-    const res = await apiFetch('/api/products');
-    if(!res.ok) throw new Error('no api');
-    const data = await res.json();
-    
-    // Handle both paginated and non-paginated responses
-    const products = Array.isArray(data) ? data : (data.products || []);
-    
-    // Update cache time
+
+    serverPage = 1;
+    const first = await fetchProductsPage(1);
+    serverHasMore = !!first.hasMore;
     productsCacheTime = now;
-    return products;
+    return first.products || [];
   }catch(e){
     return [];
   }
@@ -125,7 +128,7 @@ async function fetchCategories(){
   try{
     // Check if cache is still fresh
     const now = Date.now();
-    if(categoriesCache.length > 0 && (now - categoriesCacheTime) < CATEGORIES_CACHE_TTL){
+      if(categoriesCache.length > 0 && (now - categoriesCacheTime) < CATEGORIES_CACHE_TTL){
       console.log('[Cache] Using cached categories');
       return categoriesCache;
     }
@@ -204,11 +207,15 @@ let categoriesCacheTime = 0;
 
 // Lazy loading (infinite scroll) parameters
 const PRODUCTS_PER_PAGE = 8; // Load 8 cards at a time for bandwidth optimization
+const SERVER_PAGE_SIZE = 24; // API page size to keep responses small
 let currentPage = 0;
 let allFilteredProducts = [];
 let isLoadingMore = false;
 let hasMoreProducts = true;
 let loadMoreObserver = null;
+let serverPage = 1;
+let serverHasMore = true;
+let serverLoading = false;
 // Normalize products: ensure `images` array and numeric `priceNum`
 function normalizeProducts(list){
   return (list || []).map(p=>{
@@ -1068,8 +1075,18 @@ function initializeInfiniteScroll(products, searchQuery = ''){
   isLoadingMore = false;
   hasMoreProducts = true;
   
-  // Filter and sort products
-  let filtered = products.filter(p => selectedCategory === 'all' ? true : p.category === selectedCategory);
+  allFilteredProducts = getFilteredProducts(products, searchQuery);
+  
+  // Clear products container
+  const el = document.getElementById('products');
+  el.innerHTML = '';
+  
+  // Load and render first page
+  loadMoreProducts();
+}
+
+function getFilteredProducts(products, searchQuery = ''){
+  let filtered = (products || []).filter(p => selectedCategory === 'all' ? true : p.category === selectedCategory);
   if(searchQuery.trim()){
     const query = searchQuery.toLowerCase().trim();
     filtered = filtered.filter(p =>
@@ -1080,28 +1097,45 @@ function initializeInfiniteScroll(products, searchQuery = ''){
   if(selectedCategory !== 'all'){
     filtered.sort((a,b)=> (b.priceNum || Number(b.price || 0)) - (a.priceNum || Number(a.price || 0)) );
   }
-  
-  allFilteredProducts = filtered;
-  
-  // Clear products container
-  const el = document.getElementById('products');
-  el.innerHTML = '';
-  
-  // Load and render first page
-  loadMoreProducts();
+  return filtered;
 }
 
-function loadMoreProducts(){
+async function loadMoreProducts(){
   if(isLoadingMore || !hasMoreProducts) return;
   isLoadingMore = true;
   
   const el = document.getElementById('products');
-  const startIdx = currentPage * PRODUCTS_PER_PAGE;
-  const endIdx = startIdx + PRODUCTS_PER_PAGE;
+  let startIdx = currentPage * PRODUCTS_PER_PAGE;
+  let endIdx = startIdx + PRODUCTS_PER_PAGE;
+
+  // If we reached the end of loaded products, fetch next page from server
+  if(endIdx > allFilteredProducts.length && serverHasMore && !serverLoading){
+    serverLoading = true;
+    try{
+      const nextPage = serverPage + 1;
+      const resp = await fetchProductsPage(nextPage);
+      if(resp && Array.isArray(resp.products) && resp.products.length){
+        serverPage = nextPage;
+        productsCache = normalizeProducts(productsCache.concat(resp.products));
+        productsCacheTime = Date.now();
+      }
+      serverHasMore = !!(resp && resp.hasMore);
+    }catch(e){
+      serverHasMore = false;
+    }
+    serverLoading = false;
+    allFilteredProducts = getFilteredProducts(productsCache, currentSearchQuery);
+    startIdx = currentPage * PRODUCTS_PER_PAGE;
+    endIdx = startIdx + PRODUCTS_PER_PAGE;
+  }
+
   const pageProducts = allFilteredProducts.slice(startIdx, endIdx);
-  
-  // Check if there are more products after this page
-  hasMoreProducts = endIdx < allFilteredProducts.length;
+  // Check if there are more products after this page or on the server
+  hasMoreProducts = endIdx < allFilteredProducts.length || serverHasMore;
+  if(pageProducts.length === 0){
+    isLoadingMore = false;
+    return;
+  }
   
   const fragment = document.createDocumentFragment();
   let adCount = 0;
@@ -1195,27 +1229,7 @@ function loadMoreProducts(){
     // staggered entrance with adjusted delay
     setTimeout(()=> wrap.classList.add('entered'), 30 * pageIdx);
 
-    /* TEMPORARILY DISABLED: Ad insertion logic
-    // Insert ads after every 18 products globally
-    if((globalIdx + 1) % 18 === 0 && globalIdx + 1 < allFilteredProducts.length){
-      const adsSection = document.createElement('section');
-      adsSection.className = 'ads-section';
-      adsSection.innerHTML = `
-        <ins class="adsbygoogle"
-             style="display:block; text-align:center;"
-             data-ad-layout="in-article"
-             data-ad-format="fluid"
-             data-ad-client="ca-pub-8729431037440255"
-             data-ad-slot="9283745623"></ins>
-      `;
-      fragment.appendChild(adsSection);
-      adCount++;
-      // Push ads script after adding element
-      if(window.adsbygoogle){
-        try{ (adsbygoogle = window.adsbygoogle || []).push({}); }catch(e){}
-      }
-    }
-    */
+    // Ad insertion inside product list removed to avoid misleading placement.
   });
   
   // Add sentinel element at the end for intersection observer
@@ -1485,6 +1499,7 @@ onReady(async function(){
   let normalized = normalizeProducts(products || []);
   (function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } })(normalized);
   productsCache = normalized;
+  productsCacheTime = Date.now();
   categoriesCache = categories;
   renderCategories(categories);
   renderProducts(productsCache);
