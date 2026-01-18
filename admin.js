@@ -355,8 +355,29 @@
   async function openProductForm(id){
     const wrap = $('#product-form-wrap'); wrap.innerHTML = '';
     const products = await loadProducts();
-    const product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', images:[], category:'', description:'', colors:[] };
+    let product = id ? products.find(x=>x.id===id) : { id: Date.now().toString(), title:'', price:'', images:[], category:'', description:'', colors:[] };
     const cats = await loadCategories();
+
+    // Fetch full product details to preserve description/images during edit
+    if(id){
+      try{
+        const full = await tryApi('GET', `/api/products/${id}`);
+        if(full && full.id){
+          product = { ...product, ...full };
+        }
+      }catch(e){ /* keep list data */ }
+    }
+
+    // Normalize images for editor
+    try{
+      let imgs = Array.isArray(product.images) ? product.images.slice() : [];
+      if(!imgs.length && product.images && typeof product.images === 'string'){
+        try{ const parsed = JSON.parse(product.images); if(Array.isArray(parsed)) imgs = parsed; }catch(e){}
+      }
+      if(!imgs.length && product.image) imgs = [product.image];
+      product.images = imgs;
+      if(!product.description) product.description = '';
+    }catch(e){}
     
     // Helper: Image uploader and cropper (multi-image)
       let selectedOriginals = Array.isArray(product.images) && product.images.length ? product.images.slice() : [];
